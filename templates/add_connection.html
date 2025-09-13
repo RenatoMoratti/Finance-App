@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Adicionar Conexão - Finance App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header text-center bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Adicionar Nova Conexão
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Instruções -->
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-lightbulb me-1"></i>Como adicionar uma nova conta:
+                    </h6>
+                    <ol class="mb-0">
+                        <li>Digite o nome do banco ou instituição financeira</li>
+                        <li>Clique em "Iniciar Conexão OAuth"</li>
+                        <li>Autorize o acesso na página do Meu Pluggy</li>
+                        <li>A conta será adicionada automaticamente</li>
+                    </ol>
+                </div>
+
+                <!-- Formulário -->
+                <form id="addConnectionForm">
+                    <div class="mb-4">
+                        <label for="bankName" class="form-label">
+                            <i class="fas fa-university me-1"></i>Nome do Banco/Instituição
+                        </label>
+                        <input type="text" class="form-control form-control-lg" 
+                               id="bankName" name="bank_name" 
+                               placeholder="Ex: Itaú, Nubank, Bradesco, Inter..."
+                               required>
+                        <div class="form-text">
+                            Escolha um nome que te ajude a identificar esta conta
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="connectBtn">
+                            <i class="fas fa-link me-2"></i>Iniciar Conexão OAuth
+                        </button>
+                        <a href="{{ url_for('manage_connections') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Voltar ao Gerenciamento
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Status da Conexão -->
+                <div id="connectionStatus" class="mt-4" style="display: none;">
+                    <div class="alert alert-info" id="statusAlert">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <span id="statusMessage">Iniciando configuração...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bancos Suportados -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-check-circle me-1 text-success"></i>Principais Bancos Suportados
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-university text-primary me-2"></i>Itaú</li>
+                            <li><i class="fas fa-university text-primary me-2"></i>Bradesco</li>
+                            <li><i class="fas fa-university text-primary me-2"></i>Banco do Brasil</li>
+                            <li><i class="fas fa-university text-primary me-2"></i>Santander</li>
+                        </ul>
+                    </div>
+                    <div class="col-sm-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-university text-success me-2"></i>Nubank</li>
+                            <li><i class="fas fa-university text-success me-2"></i>Inter</li>
+                            <li><i class="fas fa-university text-success me-2"></i>Next</li>
+                            <li><i class="fas fa-university text-success me-2"></i>C6 Bank</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        E muitos outros bancos suportados pelo Meu Pluggy
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dicas de Segurança -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-shield-alt me-1 text-success"></i>Segurança OAuth
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Sem armazenamento de senhas</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Conexão criptografada</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Autorização revogável</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Padrão internacional</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentItemId = null;
+let statusCheckInterval = null;
+
+document.getElementById('addConnectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    startConnection();
+});
+
+function startConnection() {
+    const bankName = document.getElementById('bankName').value.trim();
+    
+    if (!bankName) {
+        alert('Por favor, digite o nome do banco.');
+        return;
+    }
+    
+    const connectBtn = document.getElementById('connectBtn');
+    const statusDiv = document.getElementById('connectionStatus');
+    const statusAlert = document.getElementById('statusAlert');
+    const statusMessage = document.getElementById('statusMessage');
+    
+    // Desabilita formulário e mostra status
+    connectBtn.disabled = true;
+    statusDiv.style.display = 'block';
+    statusMessage.textContent = `Criando conexão para ${bankName}...`;
+    
+    fetch('/add_connection', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bank_name: bankName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentItemId = data.item_id;
+            statusMessage.textContent = 'URL de autorização gerada! Redirecionando...';
+            
+            // Abre URL OAuth
+            setTimeout(() => {
+                window.open(data.oauth_url, '_blank');
+                statusMessage.textContent = `Complete a autorização para ${bankName} na nova aba e aguarde...`;
+                
+                // Inicia verificação de status
+                startStatusCheck();
+            }, 1000);
+        } else {
+            statusAlert.className = 'alert alert-danger';
+            statusMessage.textContent = 'Erro: ' + data.message;
+            connectBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        statusAlert.className = 'alert alert-danger';
+        statusMessage.textContent = 'Erro na conexão: ' + error;
+        connectBtn.disabled = false;
+    });
+}
+
+function startStatusCheck() {
+    if (!currentItemId) return;
+    
+    statusCheckInterval = setInterval(() => {
+        fetch('/check_oauth_status/' + currentItemId)
+        .then(response => response.json())
+        .then(data => {
+            const statusAlert = document.getElementById('statusAlert');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            if (data.success) {
+                if (data.status === 'completed') {
+                    // OAuth concluído!
+                    statusAlert.className = 'alert alert-success';
+                    statusMessage.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + data.message;
+                    
+                    clearInterval(statusCheckInterval);
+                    
+                    // Redireciona para gerenciamento
+                    setTimeout(() => {
+                        window.location.href = '/manage_connections';
+                    }, 2000);
+                } else if (data.status === 'error') {
+                    statusAlert.className = 'alert alert-danger';
+                    statusMessage.textContent = data.message;
+                    clearInterval(statusCheckInterval);
+                    document.getElementById('connectBtn').disabled = false;
+                } else {
+                    statusMessage.textContent = data.message;
+                }
+            } else {
+                statusAlert.className = 'alert alert-danger';
+                statusMessage.textContent = data.message;
+                clearInterval(statusCheckInterval);
+                document.getElementById('connectBtn').disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar status:', error);
+        });
+    }, 3000); // Verifica a cada 3 segundos
+}
+
+// Limpa interval se usuário sair da página
+window.addEventListener('beforeunload', () => {
+    if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+    }
+});
+
+// Sugestões de nomes de bancos
+document.getElementById('bankName').addEventListener('input', function(e) {
+    const value = e.target.value.toLowerCase();
+    const suggestions = ['Itaú', 'Nubank', 'Bradesco', 'Banco do Brasil', 'Santander', 'Inter', 'Next', 'C6 Bank', 'Original', 'BTG Pactual'];
+    
+    // Simples auto-complete visual (você pode expandir isso)
+    const suggestion = suggestions.find(bank => bank.toLowerCase().startsWith(value));
+    if (suggestion && value.length > 2) {
+        // Você pode implementar um dropdown de sugestões aqui
+    }
+});
+</script>
+{% endblock %}

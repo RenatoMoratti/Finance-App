@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar OAuth - Finance App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        {% if oauth_connected %}
+        <!-- OAuth já configurado -->
+        <div class="card border-success">
+            <div class="card-header bg-success text-white text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>OAuth Configurado
+                </h4>
+            </div>
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt fa-4x text-success mb-3"></i>
+                <h5>Conexão OAuth Ativa</h5>
+                <p class="text-muted">
+                    Sua conta do Meu Pluggy está conectada e funcionando.
+                    Você pode sincronizar seus dados a qualquer momento.
+                </p>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg" onclick="syncAccount()">
+                        <i class="fas fa-sync-alt me-2"></i>Sincronizar Dados
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar ao Dashboard
+                    </a>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <h6 class="text-muted">Problemas com a conexão?</h6>
+                    <button class="btn btn-outline-warning" onclick="resetOAuth()">
+                        <i class="fas fa-redo me-1"></i>Reconfigurar OAuth
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <!-- Configuração inicial do OAuth -->
+        <div class="card">
+            <div class="card-header text-center bg-gradient-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-link me-2"></i>Primeira Configuração
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5>OAuth não configurado</h5>
+                    <p class="text-muted">
+                        Para usar este aplicativo, você precisa autorizar o acesso aos seus dados financeiros
+                        através do OAuth do Meu Pluggy.
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-1"></i>Como funciona:
+                    </h6>
+                    <ol class="mb-0">
+                        <li>Clique em "Iniciar Configuração OAuth"</li>
+                        <li>Aguarde a geração da URL de autorização</li>
+                        <li>Você será redirecionado para o Meu Pluggy</li>
+                        <li>Faça login na sua conta do Meu Pluggy</li>
+                        <li>Autorize o acesso aos seus dados</li>
+                        <li>A conexão será salva automaticamente</li>
+                    </ol>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Dados criptografados</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Conexão persistente</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Sem senhas bancárias</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span>Autorização única</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg" onclick="startOAuthSetup()" id="startOAuthBtn">
+                        <i class="fas fa-play me-2"></i>Iniciar Configuração OAuth
+                    </button>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar ao Dashboard
+                    </a>
+                </div>
+
+                <!-- Status da configuração -->
+                <div id="oauthStatus" class="mt-4" style="display: none;">
+                    <div class="alert alert-info" id="statusAlert">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <span id="statusMessage">Iniciando configuração...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <h6>Precisa de uma conta no Meu Pluggy?</h6>
+                    <p class="text-muted mb-2">Crie sua conta gratuita para conectar seus bancos</p>
+                    <a href="https://meu.pluggy.ai" target="_blank" class="btn btn-success">
+                        <i class="fas fa-external-link-alt me-1"></i>Criar Conta no Meu Pluggy
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- FAQ -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-1"></i>Dúvidas Frequentes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#faq1">
+                                Preciso configurar OAuth toda vez?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Não!</strong> O OAuth é configurado apenas uma vez. Depois disso,
+                                você pode sincronizar seus dados quantas vezes quiser sem precisar autorizar novamente.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#faq2">
+                                É seguro conectar minhas contas?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Sim! Utilizamos OAuth, que é o padrão de segurança usado por grandes empresas.
+                                Suas senhas bancárias nunca são compartilhadas. A conexão é salva localmente.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#faq3">
+                                Posso revogar o acesso?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Sim! Você pode revogar o acesso através da sua conta no Meu Pluggy,
+                                ou usar o botão "Reconfigurar OAuth" neste aplicativo.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentItemId = null;
+let statusCheckInterval = null;
+
+function startOAuthSetup() {
+    const btn = document.getElementById('startOAuthBtn');
+    const statusDiv = document.getElementById('oauthStatus');
+    const statusAlert = document.getElementById('statusAlert');
+    const statusMessage = document.getElementById('statusMessage');
+    
+    // Desabilita botão e mostra status
+    btn.disabled = true;
+    statusDiv.style.display = 'block';
+    statusMessage.textContent = 'Iniciando configuração OAuth...';
+    
+    fetch('/start_oauth', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentItemId = data.item_id;
+            statusMessage.textContent = 'URL de autorização gerada! Redirecionando...';
+            
+            // Abre URL OAuth
+            setTimeout(() => {
+                window.open(data.oauth_url, '_blank');
+                statusMessage.textContent = 'Complete a autorização na nova aba e aguarde...';
+                
+                // Inicia verificação de status
+                startStatusCheck();
+            }, 1000);
+        } else {
+            statusAlert.className = 'alert alert-danger';
+            statusMessage.textContent = 'Erro: ' + data.message;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        statusAlert.className = 'alert alert-danger';
+        statusMessage.textContent = 'Erro na configuração: ' + error;
+        btn.disabled = false;
+    });
+}
+
+function startStatusCheck() {
+    if (!currentItemId) return;
+    
+    statusCheckInterval = setInterval(() => {
+        fetch('/check_oauth_status/' + currentItemId)
+        .then(response => response.json())
+        .then(data => {
+            const statusAlert = document.getElementById('statusAlert');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            if (data.success) {
+                if (data.status === 'completed') {
+                    // OAuth concluído!
+                    statusAlert.className = 'alert alert-success';
+                    statusMessage.innerHTML = '<i class="fas fa-check-circle me-1"></i>' + data.message;
+                    
+                    clearInterval(statusCheckInterval);
+                    
+                    // Redireciona para dashboard
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else if (data.status === 'error') {
+                    statusAlert.className = 'alert alert-danger';
+                    statusMessage.textContent = data.message;
+                    clearInterval(statusCheckInterval);
+                    document.getElementById('startOAuthBtn').disabled = false;
+                } else {
+                    statusMessage.textContent = data.message;
+                }
+            } else {
+                statusAlert.className = 'alert alert-danger';
+                statusMessage.textContent = data.message;
+                clearInterval(statusCheckInterval);
+                document.getElementById('startOAuthBtn').disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar status:', error);
+        });
+    }, 3000); // Verifica a cada 3 segundos
+}
+
+function resetOAuth() {
+    if (confirm('Tem certeza que deseja reconfigurar o OAuth? Você precisará autorizar novamente.')) {
+        fetch('/reset_oauth', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao resetar OAuth: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erro: ' + error);
+        });
+    }
+}
+
+// Limpa interval se usuário sair da página
+window.addEventListener('beforeunload', () => {
+    if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+    }
+});
+</script>
+{% endblock %}

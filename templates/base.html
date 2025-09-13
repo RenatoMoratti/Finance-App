@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Finance App - Gestão Financeira Inteligente{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Modern Finance CSS -->
+    <link href="{{ url_for('static', filename='css/modern-finance.css') }}" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <style>
+        /* Legacy compatibility styles - will be gradually migrated */
+        .date-column {
+            min-width: 110px;
+            font-family: var(--font-family);
+            font-weight: 600;
+        }
+        .time-column {
+            min-width: 90px;
+            font-family: var(--font-family);
+            color: var(--gray-600);
+            font-size: var(--font-size-sm);
+        }
+        .transaction-date {
+            white-space: nowrap;
+        }
+        .transaction-time {
+            white-space: nowrap;
+        }
+        
+        /* Loading animation */
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .page-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader-content {
+            text-align: center;
+        }
+        
+        .loader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--gray-200);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--spacing-4);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Page Loader -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <h5 style="color: var(--gray-600);">Carregando Finance App...</h5>
+        </div>
+    </div>
+
+    <!-- Modern Navigation -->
+    <nav class="navbar navbar-expand-lg modern-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-chart-line"></i>
+                Finance App
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'index' }}" href="{{ url_for('index') }}">
+                            <i class="fas fa-chart-pie"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'accounts' }}" href="{{ url_for('accounts') }}">
+                            <i class="fas fa-university"></i>
+                            Contas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'transactions' }}" href="{{ url_for('transactions') }}">
+                            <i class="fas fa-exchange-alt"></i>
+                            Transações
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'categories' }}" href="{{ url_for('categories') }}">
+                            <i class="fas fa-tags"></i>
+                            Categorias
+                        </a>
+                    </li>
+                                        <li class="nav-item">
+                                                <a class="nav-link {{ 'active' if request.endpoint == 'category_mappings_page' }}" href="{{ url_for('category_mappings_page') }}">
+                                                        <i class="fas fa-random"></i>
+                                                        De-Para
+                                                        {% if pending_mappings_global and pending_mappings_global > 0 %}
+                                                            <span class="badge bg-warning text-dark" style="margin-left:4px;">{{ pending_mappings_global }}</span>
+                                                        {% endif %}
+                                                </a>
+                                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'division' }}" href="{{ url_for('division') }}">
+                            <i class="fas fa-percent"></i>
+                            Divisão
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'manage_connections' }}" href="{{ url_for('manage_connections') }}">
+                            <i class="fas fa-link"></i>
+                            Conexões
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="sync-btn" onclick="modernSyncAccount()">
+                            <i class="fas fa-sync-alt"></i>
+                            Sincronizar
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="{% block container_class %}container{% endblock %}" style="margin-top: var(--spacing-8); margin-bottom: var(--spacing-8);">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages mb-6">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show modern-alert" role="alert">
+                            <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }}"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Enhanced Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modern-card" style="border: none;">
+                <div class="modal-body text-center" style="padding: var(--spacing-8);">
+                    <div class="loading-spinner mb-4" style="width: 40px; height: 40px; margin: 0 auto;"></div>
+                    <h5 class="mb-2" style="color: var(--gray-800);">Sincronizando dados...</h5>
+                    <p class="text-muted mb-0">Aguarde enquanto atualizamos suas informações bancárias</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modern Finance JavaScript -->
+    <script src="{{ url_for('static', filename='js/modern-finance.js') }}"></script>
+    
+    <script>
+        // Legacy sync function compatibility
+        function syncAccount() {
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            
+            // Update loading text
+            const loadingText = document.querySelector('#loadingModal .modal-body h5');
+            if (loadingText) {
+                loadingText.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i>Atualizando dados bancários...';
+            }
+            
+            modal.show();
+            
+            fetch('/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                modal.hide();
+                if (data.success) {
+                    if (window.modernFinanceApp) {
+                        window.modernFinanceApp.showNotification(data.message, 'success');
+                    } else {
+                        alert(data.message);
+                    }
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    if (window.modernFinanceApp) {
+                        window.modernFinanceApp.showNotification('Erro na sincronização: ' + data.message, 'error');
+                    } else {
+                        alert('Erro na sincronização: ' + data.message);
+                    }
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                }
+            })
+            .catch(error => {
+                modal.hide();
+                const errorMessage = 'Erro na sincronização: ' + error;
+                if (window.modernFinanceApp) {
+                    window.modernFinanceApp.showNotification(errorMessage, 'error');
+                } else {
+                    alert(errorMessage);
+                }
+            });
+        }
+
+        // Enhanced currency and date formatting
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('pt-BR');
+        }
+
+        // Hide page loader after everything is loaded
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const loader = document.getElementById('pageLoader');
+                if (loader) {
+                    loader.classList.add('hidden');
+                    setTimeout(() => loader.remove(), 500);
+                }
+            }, 500);
+        });
+
+        // Add modern interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hover effects to cards
+            document.querySelectorAll('.card, .modern-card').forEach(card => {
+                card.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+            });
+
+            // Add smooth scrolling for internal links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

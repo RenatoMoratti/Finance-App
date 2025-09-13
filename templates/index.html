@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Finance App{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="welcome-section mb-8">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="display-5 font-weight-bold mb-2" style="color: var(--gray-800);">
+                Bem-vindo ao Finance App
+            </h1>
+            <p class="text-muted font-weight-medium">
+                Gerencie suas finanças de forma inteligente e moderna
+            </p>
+            {% if pending_mappings and pending_mappings > 0 %}
+            <div class="mt-2">
+                <a href="{{ url_for('category_mappings_page') }}" class="modern-badge modern-badge-warning" style="text-decoration:none;">
+                    <i class="fas fa-random"></i> {{ pending_mappings }} categorias de API aguardam De-Para
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-3">
+            <a href="{{ url_for('add_connection') }}" class="modern-btn modern-btn-primary">
+                <i class="fas fa-plus"></i>
+                Nova Conexão
+            </a>
+            <button class="modern-btn modern-btn-outline" onclick="modernSyncAccount()">
+                <i class="fas fa-sync-alt"></i>
+                Sincronizar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card stat-card-accounts fade-in-up">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ (statistics.accounts_count or 0)|integer_br }}</h3>
+                <p>Contas Conectadas</p>
+            </div>
+            <div class="stat-icon stat-icon-accounts">
+                <i class="fas fa-university"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-card-balance fade-in-up-delay-1">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ (statistics.total_balance or 0)|currency_br }}</h3>
+                <p>Saldo Total</p>
+            </div>
+            <div class="stat-icon stat-icon-balance">
+                <i class="fas fa-wallet"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-card-transactions fade-in-up-delay-2">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ (statistics.transactions_count or 0)|integer_br }}</h3>
+                <p>Total de Transações</p>
+            </div>
+            <div class="stat-icon stat-icon-transactions">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-card-income fade-in-up-delay-3">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ (statistics.monthly_income or 0)|currency_br }}</h3>
+                <p>Receita Mensal</p>
+            </div>
+            <div class="stat-icon stat-icon-income">
+                <i class="fas fa-trend-up"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid -->
+<div class="dashboard-grid">
+    <!-- Connection Status Card -->
+    <div class="status-card fade-in-up-delay-4">
+        <div class="status-header">
+            <h6>
+                <i class="fas fa-link text-primary"></i>
+                Status das Conexões
+            </h6>
+            <a href="{{ url_for('manage_connections') }}" class="modern-btn modern-btn-sm modern-btn-outline">
+                <i class="fas fa-cog"></i>
+                Gerenciar
+            </a>
+        </div>
+        <div class="status-body">
+            {% if oauth_connected %}
+            <div class="connection-status">
+                <div class="connection-item">
+                    <i class="fas fa-shield-check text-success"></i>
+                    <h6>Conectado</h6>
+                    <small>Status Seguro</small>
+                </div>
+                <div class="connection-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <h6>OAuth Ativo</h6>
+                    <small>Autenticado</small>
+                </div>
+                <div class="connection-item">
+                    <a href="{{ url_for('add_connection') }}" class="text-decoration-none">
+                        <i class="fas fa-plus-circle text-info"></i>
+                        <h6 style="color: var(--info-color);">Adicionar</h6>
+                        <small>Nova Conta</small>
+                    </a>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <div class="modern-badge modern-badge-success">
+                    <i class="fas fa-shield-alt"></i>
+                    Conexões seguras via OAuth
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h6>Nenhuma conexão configurada</h6>
+                <p class="text-muted mb-4">Configure suas contas bancárias para começar a sincronizar dados</p>
+                <a href="{{ url_for('manage_connections') }}" class="modern-btn modern-btn-primary">
+                    <i class="fas fa-plus"></i>
+                    Configurar Conexões
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sync Status Card -->
+    <div class="status-card fade-in-up-delay-4">
+        <div class="status-header">
+            <h6>
+                <i class="fas fa-sync-alt text-info"></i>
+                Sincronização
+            </h6>
+            <button class="modern-btn modern-btn-sm modern-btn-primary" onclick="modernSyncAccount()">
+                <i class="fas fa-sync-alt"></i>
+                Sincronizar
+            </button>
+        </div>
+        <div class="status-body">
+            {% if last_sync %}
+            <div class="sync-info">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="info-item">
+                            <strong>Última Atualização:</strong>
+                            <div class="text-muted">{{ last_sync.sync_date }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="info-item">
+                            <strong>Status:</strong>
+                            <div>
+                                <span class="modern-badge modern-badge-success">{{ last_sync.status }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="info-item">
+                            <strong>Contas:</strong>
+                            <div class="text-muted">{{ (last_sync.accounts_count or 0)|integer_br }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="info-item">
+                            <strong>Transações:</strong>
+                            <div class="text-muted">{{ (last_sync.transactions_count or 0)|integer_br }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                <h6>Primeira sincronização</h6>
+                <p class="text-muted mb-4">Configure suas conexões e sincronize seus dados</p>
+                <button class="modern-btn modern-btn-primary" onclick="modernSyncAccount()">
+                    <i class="fas fa-sync-alt"></i>
+                    Sincronizar Agora
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Accounts Summary -->
+<div class="modern-card mb-6 fade-in-up-delay-5">
+    <div class="modern-card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5>
+                <i class="fas fa-university text-primary"></i>
+                Resumo das Contas
+            </h5>
+            <a href="{{ url_for('accounts') }}" class="modern-btn modern-btn-sm modern-btn-outline">
+                Ver Todas
+            </a>
+        </div>
+    </div>
+    <div class="modern-card-body">
+        {% if accounts %}
+        <div class="modern-table-container">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Conta</th>
+                        <th>Tipo</th>
+                        <th>Status</th>
+                        <th class="text-right">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts[:5] %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="account-icon">
+                                    <i class="fas fa-university text-primary"></i>
+                                </div>
+                                <div>
+                                    <div class="font-weight-medium">{{ account.name }}</div>
+                                    <small class="text-muted">{{ account.institution_name or 'Banco' }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="modern-badge modern-badge-secondary">
+                                {{ account.type or 'Conta Corrente' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="modern-badge modern-badge-success">
+                                <i class="fas fa-check-circle"></i>
+                                Ativa
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <span class="{% if account.balance >= 0 %}amount-positive{% else %}amount-negative{% endif %} font-weight-semibold">
+                                {{ account.balance|currency_br }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-university fa-3x text-muted mb-3"></i>
+            <h6>Nenhuma conta encontrada</h6>
+            <p class="text-muted mb-4">Conecte suas contas bancárias para visualizar o resumo</p>
+            <a href="{{ url_for('add_connection') }}" class="modern-btn modern-btn-primary">
+                <i class="fas fa-plus"></i>
+                Adicionar Conta
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="modern-card fade-in-up-delay-6">
+    <div class="modern-card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5>
+                <i class="fas fa-history text-primary"></i>
+                Transações Recentes
+            </h5>
+            <a href="{{ url_for('transactions') }}" class="modern-btn modern-btn-sm modern-btn-outline">
+                Ver Todas
+            </a>
+        </div>
+    </div>
+    <div class="modern-card-body">
+        {% if recent_transactions %}
+        <div class="modern-table-container">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Conta</th>
+                        <th>Categoria</th>
+                        <th class="text-right">Valor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in recent_transactions[:8] %}
+                    <tr>
+                        <td class="transaction-date">
+                            <div class="date-info">
+                                <div class="font-weight-medium">
+                                    {{ transaction.transaction_date or (transaction.date[:10] if transaction.date else 'N/A') }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ transaction.transaction_time or (transaction.date[11:19] if transaction.date and transaction.date|length > 10 else 'N/A') }}
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="transaction-description">
+                                {{ transaction.description or 'Sem descrição' }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="modern-badge modern-badge-secondary">
+                                {{ transaction.account_name }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if transaction.category %}
+                            <span class="modern-badge modern-badge-primary">{{ transaction.category }}</span>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% set is_credit = (transaction.type == 'CREDIT') %}
+                            <span class="{% if is_credit %}amount-positive{% else %}amount-negative{% endif %} font-weight-semibold">
+                                {% if is_credit %}+{% else %}-{% endif %}{{ transaction.amount|currency_br }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if transaction.verified %}
+                            <span class="modern-badge modern-badge-success">
+                                <i class="fas fa-check"></i>
+                                Verificado
+                            </span>
+                            {% else %}
+                            <span class="modern-badge modern-badge-warning">
+                                <i class="fas fa-clock"></i>
+                                Pendente
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+            <h6>Nenhuma transação encontrada</h6>
+            <p class="text-muted mb-4">Sincronize suas contas para visualizar as transações</p>
+            <button class="modern-btn modern-btn-primary" onclick="modernSyncAccount()">
+                <i class="fas fa-sync-alt"></i>
+                Sincronizar Agora
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Monthly Summary -->
+{% if statistics %}
+<div class="modern-card mt-6 fade-in-up-delay-7">
+    <div class="modern-card-header">
+        <h5>
+            <i class="fas fa-chart-bar text-primary"></i>
+            Resumo Mensal (Últimos 30 dias)
+        </h5>
+    </div>
+    <div class="modern-card-body">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="summary-item text-center">
+                    <div class="summary-icon mb-3">
+                        <i class="fas fa-arrow-up fa-2x text-success"></i>
+                    </div>
+                    <h4 class="amount-positive mb-2">{{ (statistics.monthly_income or 0)|currency_br }}</h4>
+                    <p class="text-muted mb-0">Receitas do Mês</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-item text-center">
+                    <div class="summary-icon mb-3">
+                        <i class="fas fa-arrow-down fa-2x text-danger"></i>
+                    </div>
+                    <h4 class="amount-negative mb-2">{{ (statistics.monthly_expense or 0)|currency_br }}</h4>
+                    <p class="text-muted mb-0">Despesas do Mês</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="summary-item text-center">
+                    <div class="summary-icon mb-3">
+                        <i class="fas fa-balance-scale fa-2x {% if (statistics.monthly_net or 0) >= 0 %}text-success{% else %}text-danger{% endif %}"></i>
+                    </div>
+                    <h4 class="{% if (statistics.monthly_net or 0) >= 0 %}amount-positive{% else %}amount-negative{% endif %} mb-2">
+                        {% if (statistics.monthly_net or 0) >= 0 %}+{% endif %}{{ (statistics.monthly_net or 0)|currency_br }}
+                    </h4>
+                    <p class="text-muted mb-0">Saldo Líquido</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* Dashboard specific styles */
+.welcome-section h1 {
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.info-item strong {
+    color: var(--gray-700);
+    font-size: var(--font-size-sm);
+    display: block;
+    margin-bottom: var(--spacing-1);
+}
+
+.account-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    background: rgba(37, 99, 235, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.date-info {
+    min-width: 120px;
+}
+
+.transaction-description {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.summary-item {
+    padding: var(--spacing-4);
+    border-radius: var(--border-radius-lg);
+    background: var(--bg-secondary);
+    transition: var(--transition-base);
+}
+
+.summary-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.summary-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--border-radius-full);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Animation delays */
+.fade-in-up-delay-5 { animation-delay: 0.5s; }
+.fade-in-up-delay-6 { animation-delay: 0.6s; }
+.fade-in-up-delay-7 { animation-delay: 0.7s; }
+</style>
+{% endblock %}

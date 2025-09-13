@@ -1,0 +1,707 @@
+{% extends "base.html" %}
+
+{% block title %}Categorias - Finance App{% endblock %}
+
+{% block container_class %}container-fluid{% endblock %}
+
+{% block content %}
+<style>
+    .category-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .category-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+    }
+    
+    .category-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem;
+        cursor: pointer;
+    }
+    
+    .category-header:hover {
+        background-color: #e9ecef;
+    }
+    
+    .subcategory-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f3f4;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .subcategory-item:last-child {
+        border-bottom: none;
+    }
+    
+    .subcategory-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .category-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #dee2e6;
+    }
+    
+    .type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .credit-type {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .debit-type {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .tab-content {
+        margin-top: 1rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .form-control-color {
+        width: 3rem;
+        height: calc(1.5em + 0.75rem + 2px);
+        padding: 0.375rem;
+    }
+    
+    .icon-preview {
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+    }
+</style>
+
+<div class="px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border border-2 border-light shadow-sm">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tags me-2"></i>Gerenciar Categorias
+                        </h5>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openCreateCategoryModal()">
+                            <i class="fas fa-plus me-1"></i>Nova Categoria
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Tabs para Entradas e Saídas -->
+                    <ul class="nav nav-tabs" id="categoryTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="credit-tab" data-bs-toggle="tab" data-bs-target="#credit-pane" 
+                                    type="button" role="tab" aria-controls="credit-pane" aria-selected="true">
+                                <i class="fas fa-arrow-up text-success me-1"></i>Categorias de Entrada
+                                <span class="badge bg-success ms-1">{{ credit_categories|length }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="debit-tab" data-bs-toggle="tab" data-bs-target="#debit-pane" 
+                                    type="button" role="tab" aria-controls="debit-pane" aria-selected="false">
+                                <i class="fas fa-arrow-down text-danger me-1"></i>Categorias de Saída
+                                <span class="badge bg-danger ms-1">{{ debit_categories|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="categoryTabContent">
+                        <!-- Tab de Entradas -->
+                        <div class="tab-pane fade show active" id="credit-pane" role="tabpanel" aria-labelledby="credit-tab">
+                            {% if credit_categories %}
+                                {% for category_name, category_data in credit_categories.items() %}
+                                <div class="category-card">
+                                    <div class="category-header" onclick="toggleCategory('credit-{{ loop.index }}')">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                {% if category_data.color %}
+                                                    <span class="category-color" style="background-color: {{ category_data.color }}"></span>
+                                                {% endif %}
+                                                {% if category_data.icon %}
+                                                    <i class="{{ category_data.icon }} me-2"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <h6 class="mb-0">{{ category_data.name }}</h6>
+                                                    {% if category_data.description %}
+                                                        <small class="text-muted">{{ category_data.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge credit-type me-2">ENTRADA</span>
+                                                {% if category_data.subcategories %}
+                                                    <span class="badge bg-secondary me-2">{{ category_data.subcategories|length }} subcategorias</span>
+                                                {% endif %}
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                                            data-bs-toggle="dropdown" onclick="event.stopPropagation()">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#" onclick="editCategory({{ category_data.id }}, '{{ category_data.name }}', null, 'CREDIT', '{{ category_data.description or '' }}', '{{ category_data.color or '' }}', '{{ category_data.icon or '' }}')">
+                                                            <i class="fas fa-edit me-2"></i>Editar
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="#" onclick="addSubcategory('{{ category_data.name }}', 'CREDIT')">
+                                                            <i class="fas fa-plus me-2"></i>Adicionar Subcategoria
+                                                        </a></li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteCategory({{ category_data.id }}, '{{ category_data.name }}')">
+                                                            <i class="fas fa-trash me-2"></i>Excluir
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
+                                                <i class="fas fa-chevron-down ms-2 toggle-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if category_data.subcategories %}
+                                    <div class="collapse" id="credit-{{ loop.index }}">
+                                        {% for subcategory in category_data.subcategories %}
+                                        <div class="subcategory-item">
+                                            <div class="d-flex align-items-center">
+                                                {% if subcategory.color %}
+                                                    <span class="category-color" style="background-color: {{ subcategory.color }}"></span>
+                                                {% endif %}
+                                                {% if subcategory.icon %}
+                                                    <i class="{{ subcategory.icon }} me-2"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <span class="fw-medium">{{ subcategory.name }}</span>
+                                                    {% if subcategory.description %}
+                                                        <br><small class="text-muted">{{ subcategory.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" onclick="editCategory({{ subcategory.id }}, '{{ category_data.name }}', '{{ subcategory.name }}', 'CREDIT', '{{ subcategory.description or '' }}', '{{ subcategory.color or '' }}', '{{ subcategory.icon or '' }}')">
+                                                        <i class="fas fa-edit me-2"></i>Editar
+                                                    </a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteCategory({{ subcategory.id }}, '{{ category_data.name }} > {{ subcategory.name }}')">
+                                                        <i class="fas fa-trash me-2"></i>Excluir
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-tags fa-4x mb-3"></i>
+                                    <h4>Nenhuma categoria de entrada</h4>
+                                    <p>Crie categorias para organizar suas receitas e ganhos.</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-success" onclick="openCreateCategoryModal('CREDIT')">
+                                            <i class="fas fa-plus me-1"></i>Criar Categoria de Entrada
+                                        </button>
+                                        {% if not debit_categories %}
+                                        <button class="btn btn-outline-primary" onclick="populateDefaultCategories()">
+                                            <i class="fas fa-magic me-1"></i>Usar Categorias Padrão
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Tab de Saídas -->
+                        <div class="tab-pane fade" id="debit-pane" role="tabpanel" aria-labelledby="debit-tab">
+                            {% if debit_categories %}
+                                {% for category_name, category_data in debit_categories.items() %}
+                                <div class="category-card">
+                                    <div class="category-header" onclick="toggleCategory('debit-{{ loop.index }}')">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                {% if category_data.color %}
+                                                    <span class="category-color" style="background-color: {{ category_data.color }}"></span>
+                                                {% endif %}
+                                                {% if category_data.icon %}
+                                                    <i class="{{ category_data.icon }} me-2"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <h6 class="mb-0">{{ category_data.name }}</h6>
+                                                    {% if category_data.description %}
+                                                        <small class="text-muted">{{ category_data.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge debit-type me-2">SAÍDA</span>
+                                                {% if category_data.subcategories %}
+                                                    <span class="badge bg-secondary me-2">{{ category_data.subcategories|length }} subcategorias</span>
+                                                {% endif %}
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                                            data-bs-toggle="dropdown" onclick="event.stopPropagation()">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="#" onclick="editCategory({{ category_data.id }}, '{{ category_data.name }}', null, 'DEBIT', '{{ category_data.description or '' }}', '{{ category_data.color or '' }}', '{{ category_data.icon or '' }}')">
+                                                            <i class="fas fa-edit me-2"></i>Editar
+                                                        </a></li>
+                                                        <li><a class="dropdown-item" href="#" onclick="addSubcategory('{{ category_data.name }}', 'DEBIT')">
+                                                            <i class="fas fa-plus me-2"></i>Adicionar Subcategoria
+                                                        </a></li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteCategory({{ category_data.id }}, '{{ category_data.name }}')">
+                                                            <i class="fas fa-trash me-2"></i>Excluir
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
+                                                <i class="fas fa-chevron-down ms-2 toggle-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if category_data.subcategories %}
+                                    <div class="collapse" id="debit-{{ loop.index }}">
+                                        {% for subcategory in category_data.subcategories %}
+                                        <div class="subcategory-item">
+                                            <div class="d-flex align-items-center">
+                                                {% if subcategory.color %}
+                                                    <span class="category-color" style="background-color: {{ subcategory.color }}"></span>
+                                                {% endif %}
+                                                {% if subcategory.icon %}
+                                                    <i class="{{ subcategory.icon }} me-2"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <span class="fw-medium">{{ subcategory.name }}</span>
+                                                    {% if subcategory.description %}
+                                                        <br><small class="text-muted">{{ subcategory.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" onclick="editCategory({{ subcategory.id }}, '{{ category_data.name }}', '{{ subcategory.name }}', 'DEBIT', '{{ subcategory.description or '' }}', '{{ subcategory.color or '' }}', '{{ subcategory.icon or '' }}')">
+                                                        <i class="fas fa-edit me-2"></i>Editar
+                                                    </a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteCategory({{ subcategory.id }}, '{{ category_data.name }} > {{ subcategory.name }}')">
+                                                        <i class="fas fa-trash me-2"></i>Excluir
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-tags fa-4x mb-3"></i>
+                                    <h4>Nenhuma categoria de saída</h4>
+                                    <p>Crie categorias para organizar suas despesas e gastos.</p>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-danger" onclick="openCreateCategoryModal('DEBIT')">
+                                            <i class="fas fa-plus me-1"></i>Criar Categoria de Saída
+                                        </button>
+                                        {% if not credit_categories %}
+                                        <button class="btn btn-outline-primary" onclick="populateDefaultCategories()">
+                                            <i class="fas fa-magic me-1"></i>Usar Categorias Padrão
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Criar/Editar Categoria -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalLabel">
+                    <i class="fas fa-plus me-2"></i>Nova Categoria
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input type="hidden" id="category_id" name="category_id">
+                    <input type="hidden" id="is_edit" name="is_edit" value="false">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="category_name" class="form-label">Nome da Categoria *</label>
+                            <input type="text" class="form-control" id="category_name" name="name" 
+                                   placeholder="Ex: Alimentação, Transporte" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="transaction_type" class="form-label">Tipo *</label>
+                            <select class="form-select" id="transaction_type" name="transaction_type" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="CREDIT">Entrada (+)</option>
+                                <option value="DEBIT">Saída (-)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <label for="subcategory_name" class="form-label">Subcategoria (opcional)</label>
+                            <input type="text" class="form-control" id="subcategory_name" name="subcategory" 
+                                   placeholder="Ex: Restaurante, Supermercado">
+                            <div class="form-text">Deixe em branco para criar apenas uma categoria principal</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="category_color" class="form-label">Cor</label>
+                            <div class="d-flex align-items-center">
+                                <input type="color" class="form-control form-control-color" id="category_color" 
+                                       name="color" value="#007bff">
+                                <div class="icon-preview" id="icon_preview">
+                                    <i class="fas fa-tag"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="category_description" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="category_description" name="description" rows="2"
+                                      placeholder="Descrição opcional da categoria"></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="category_icon" class="form-label">Ícone (FontAwesome)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">fas fa-</span>
+                                <input type="text" class="form-control" id="category_icon" name="icon" 
+                                       placeholder="tag" value="tag">
+                            </div>
+                            <div class="form-text">
+                                Exemplos: shopping-cart, utensils, car, home, heart, graduation-cap
+                                <a href="https://fontawesome.com/icons" target="_blank" class="ms-2">
+                                    <i class="fas fa-external-link-alt"></i> Ver todos os ícones
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+                    <i class="fas fa-save me-1"></i>Salvar Categoria
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteCategoryModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza de que deseja excluir esta categoria?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Esta ação não pode ser desfeita!</strong>
+                </div>
+                <div id="deleteCategoryInfo" class="mt-3">
+                    <!-- Informações da categoria a ser excluída -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteCategoryBtn">
+                    <i class="fas fa-trash me-1"></i>Excluir Categoria
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Função para alternar expansão de categoria
+    window.toggleCategory = function(targetId) {
+        const target = document.getElementById(targetId);
+        const icon = target.previousElementSibling.querySelector('.toggle-icon');
+        
+        if (target.classList.contains('show')) {
+            target.classList.remove('show');
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        } else {
+            target.classList.add('show');
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        }
+    };
+    
+    // Função para abrir modal de criação
+    window.openCreateCategoryModal = function(transactionType = null) {
+        // Limpar formulário
+        document.getElementById('categoryForm').reset();
+        document.getElementById('category_id').value = '';
+        document.getElementById('is_edit').value = 'false';
+        
+        // Definir tipo se especificado
+        if (transactionType) {
+            document.getElementById('transaction_type').value = transactionType;
+        }
+        
+        // Resetar cor padrão
+        document.getElementById('category_color').value = '#007bff';
+        
+        // Atualizar título
+        document.getElementById('categoryModalLabel').innerHTML = '<i class="fas fa-plus me-2"></i>Nova Categoria';
+        document.getElementById('saveCategoryBtn').innerHTML = '<i class="fas fa-save me-1"></i>Salvar Categoria';
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+        modal.show();
+    };
+    
+    // Função para adicionar subcategoria
+    window.addSubcategory = function(parentCategory, transactionType) {
+        // Abrir modal com categoria preenchida
+        openCreateCategoryModal(transactionType);
+        document.getElementById('category_name').value = parentCategory;
+        document.getElementById('category_name').readOnly = true;
+        document.getElementById('subcategory_name').focus();
+        
+        // Atualizar título
+        document.getElementById('categoryModalLabel').innerHTML = `<i class="fas fa-plus me-2"></i>Nova Subcategoria para "${parentCategory}"`;
+    };
+    
+    // Função para editar categoria
+    window.editCategory = function(categoryId, name, subcategory, transactionType, description, color, icon) {
+        // Preencher formulário
+        document.getElementById('category_id').value = categoryId;
+        document.getElementById('is_edit').value = 'true';
+        document.getElementById('category_name').value = name;
+        document.getElementById('category_name').readOnly = false;
+        document.getElementById('subcategory_name').value = subcategory || '';
+        document.getElementById('transaction_type').value = transactionType;
+        document.getElementById('category_description').value = description || '';
+        document.getElementById('category_color').value = color || '#007bff';
+        
+        // Processar ícone
+        if (icon && icon.startsWith('fas fa-')) {
+            document.getElementById('category_icon').value = icon.replace('fas fa-', '');
+        } else {
+            document.getElementById('category_icon').value = icon || 'tag';
+        }
+        
+        // Atualizar título
+        const title = subcategory ? `Editar Subcategoria "${subcategory}"` : `Editar Categoria "${name}"`;
+        document.getElementById('categoryModalLabel').innerHTML = `<i class="fas fa-edit me-2"></i>${title}`;
+        document.getElementById('saveCategoryBtn').innerHTML = '<i class="fas fa-save me-1"></i>Atualizar Categoria';
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+        modal.show();
+    };
+    
+    // Função para excluir categoria
+    window.deleteCategory = function(categoryId, categoryName) {
+        // Preencher informações no modal
+        const infoDiv = document.getElementById('deleteCategoryInfo');
+        infoDiv.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">${categoryName}</h6>
+                    <p class="card-text">Esta categoria será removida permanentemente.</p>
+                </div>
+            </div>
+        `;
+        
+        // Configurar botão de confirmação
+        const confirmBtn = document.getElementById('confirmDeleteCategoryBtn');
+        confirmBtn.onclick = function() {
+            performDeleteCategory(categoryId);
+        };
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+        modal.show();
+    };
+    
+    // Função para executar exclusão
+    function performDeleteCategory(categoryId) {
+        fetch(`/categories/${categoryId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteCategoryModal'));
+                modal.hide();
+                
+                // Recarregar página
+                window.location.reload();
+            } else {
+                alert('Erro ao excluir categoria: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir categoria');
+        });
+    }
+    
+    // Salvar categoria
+    document.getElementById('saveCategoryBtn').addEventListener('click', function() {
+        const form = document.getElementById('categoryForm');
+        const formData = new FormData(form);
+        
+        // Validar campos obrigatórios
+        const name = formData.get('name').trim();
+        const transactionType = formData.get('transaction_type');
+        
+        if (!name) {
+            alert('Nome da categoria é obrigatório');
+            return;
+        }
+        
+        if (!transactionType) {
+            alert('Tipo da transação é obrigatório');
+            return;
+        }
+        
+        // Processar ícone
+        const iconValue = formData.get('icon');
+        if (iconValue && !iconValue.startsWith('fas fa-')) {
+            formData.set('icon', 'fas fa-' + iconValue);
+        }
+        
+        // Determinar URL e método
+        const isEdit = formData.get('is_edit') === 'true';
+        const categoryId = formData.get('category_id');
+        const url = isEdit ? `/categories/${categoryId}/edit` : '/categories/create';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+                modal.hide();
+                
+                // Recarregar página
+                window.location.reload();
+            } else {
+                alert('Erro ao salvar categoria: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar categoria');
+        });
+    });
+    
+    // Preview do ícone
+    document.getElementById('category_icon').addEventListener('input', function() {
+        const iconValue = this.value.trim();
+        const preview = document.getElementById('icon_preview');
+        
+        if (iconValue) {
+            const iconClass = iconValue.startsWith('fas fa-') ? iconValue : 'fas fa-' + iconValue;
+            preview.innerHTML = `<i class="${iconClass}"></i>`;
+        } else {
+            preview.innerHTML = '<i class="fas fa-tag"></i>';
+        }
+    });
+    
+    // Limpar readonly quando modal for fechado
+    document.getElementById('categoryModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('category_name').readOnly = false;
+    });
+    
+    // Função para popular categorias padrão
+    window.populateDefaultCategories = function() {
+        if (confirm('Isso criará categorias padrão para entrada e saída. Deseja continuar?')) {
+            fetch('/categories/populate_defaults', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Categorias padrão criadas com sucesso!');
+                    window.location.reload();
+                } else {
+                    alert('Erro ao criar categorias padrão: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao criar categorias padrão');
+            });
+        }
+    };
+});
+</script>
+{% endblock %}

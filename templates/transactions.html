@@ -1,0 +1,2708 @@
+{% extends "base.html" %}
+
+{% block title %}Transações - Finance App{% endblock %}
+
+{% block container_class %}container-fluid{% endblock %}
+
+{% block content %}
+<!-- Modern Transactions Page -->
+<div class="modern-page-content">
+    <!-- Statistics Section -->
+    {% if transactions %}
+    <div class="modern-stats-section">
+        <div class="modern-grid modern-grid-10">
+            <!-- Combined Stats Card - General (All Transactions) -->
+            <div class="modern-card modern-stats-card modern-stats-card-compact">
+                <div class="modern-card-header modern-stats-header">
+                    <h6 class="modern-stats-title">
+                        <i class="fas fa-database"></i>
+                        Total Geral
+                    </h6>
+                </div>
+                <div class="modern-stats-row">
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number">{{ all_transactions|length|integer_br }}</div>
+                        <div class="modern-stat-label">Total</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-success">{{ (all_transactions|selectattr("verified", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Verificadas</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-warning">{{ (all_transactions|selectattr("verified", "equalto", false)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Pendentes</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-muted">{{ (all_transactions|selectattr("ignorar_transacao", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Ignoradas</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-danger">{{ (all_transactions|selectattr("conflict_detected", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Conflitos</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Combined Stats Card - Filtered -->
+            <div class="modern-card modern-stats-card modern-stats-card-compact">
+                <div class="modern-card-header modern-stats-header">
+                    <h6 class="modern-stats-title">
+                        <i class="fas fa-filter"></i>
+                        Com Filtros
+                    </h6>
+                </div>
+                <div class="modern-stats-row">
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number">{{ transactions|length|integer_br }}</div>
+                        <div class="modern-stat-label">Total</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-success">{{ (transactions|selectattr("verified", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Verificadas</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-warning">{{ (transactions|selectattr("verified", "equalto", false)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Pendentes</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-muted">{{ (transactions|selectattr("ignorar_transacao", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Ignoradas</div>
+                    </div>
+                    <div class="modern-stat-item">
+                        <div class="modern-stat-number text-danger">{{ (transactions|selectattr("conflict_detected", "equalto", true)|list)|length|integer_br }}</div>
+                        <div class="modern-stat-label">Conflitos</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Income Card -->
+                <script>
+                // Atualiza os cards de Verificadas e Ignoradas ao marcar/desmarcar checkboxes
+                document.addEventListener('DOMContentLoaded', function() {
+                    function updateStatsCards() {
+                        // Seleciona todos os checkboxes de verificação e ignorar
+                        const verifCheckboxes = document.querySelectorAll('.modern-checkbox.verification-checkbox');
+                        const ignorarCheckboxes = document.querySelectorAll('.modern-checkbox.ignore-checkbox');
+
+                        // Conta quantos estão marcados
+                        let verifCount = 0;
+                        let ignorarCount = 0;
+                        verifCheckboxes.forEach(cb => { if (cb.checked) verifCount++; });
+                        ignorarCheckboxes.forEach(cb => { if (cb.checked) ignorarCount++; });
+
+                        // Atualiza os cards (tanto geral quanto filtrado)
+                        // Geral
+                        const geralVerif = document.querySelectorAll('.modern-stats-row .modern-stat-label');
+                        geralVerif.forEach(label => {
+                            if (label.textContent.trim() === 'Verificadas') {
+                                const number = label.previousElementSibling;
+                                if (number) number.textContent = verifCount.toLocaleString('pt-BR');
+                            }
+                            if (label.textContent.trim() === 'Ignoradas') {
+                                const number = label.previousElementSibling;
+                                if (number) number.textContent = ignorarCount.toLocaleString('pt-BR');
+                            }
+                        });
+                    }
+
+                    // Adiciona listeners
+                    document.querySelectorAll('.modern-checkbox.verification-checkbox, .modern-checkbox.ignore-checkbox').forEach(cb => {
+                        cb.addEventListener('change', updateStatsCards);
+                    });
+                });
+                </script>
+            <div class="modern-card modern-financial-card modern-financial-card-compact modern-financial-positive">
+                <div class="modern-financial-content modern-financial-horizontal">
+                    <div class="modern-financial-icon" style="position: relative;">
+                        <span class="modern-financial-icon-bg income"></span>
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="modern-financial-details">
+                        <div class="modern-financial-amount" id="card_total_income">
+                            {{ transactions|selectattr("ignorar_transacao", "equalto", false)|selectattr("type", "equalto", "CREDIT")|map(attribute="amount")|sum|abs|currency_br }}
+                        </div>
+                        <div class="modern-financial-label">Total Entradas</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Expense Card -->
+            <div class="modern-card modern-financial-card modern-financial-card-compact modern-financial-negative">
+                <div class="modern-financial-content modern-financial-horizontal">
+                    <div class="modern-financial-icon" style="position: relative;">
+                        <span class="modern-financial-icon-bg expense"></span>
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="modern-financial-details">
+                        <div class="modern-financial-amount" id="card_total_expense">
+                            {{ transactions|selectattr("ignorar_transacao", "equalto", false)|selectattr("type", "equalto", "DEBIT")|map(attribute="amount")|sum|currency_br }}
+                        </div>
+                        <div class="modern-financial-label">Total Saídas</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Net Balance Card -->
+            <div class="modern-card modern-financial-card modern-financial-card-compact">
+                {% set credit_total = transactions|selectattr("ignorar_transacao", "equalto", false)|selectattr("type", "equalto", "CREDIT")|map(attribute="amount")|sum|abs %}
+                {% set debit_total = transactions|selectattr("ignorar_transacao", "equalto", false)|selectattr("type", "equalto", "DEBIT")|map(attribute="amount")|sum %}
+                {% set net_total = credit_total - debit_total %}
+                <div class="modern-financial-content modern-financial-horizontal">
+                    <div class="modern-financial-icon {% if net_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if net_total >= 0 %}
+                            <i class="fas fa-chart-line"></i>
+                        {% else %}
+                            <i class="fas fa-chart-line-down"></i>
+                        {% endif %}
+                    </div>
+                    <div class="modern-financial-details">
+                        <div class="modern-financial-amount {% if net_total >= 0 %}text-success{% else %}text-danger{% endif %}" id="card_net_total">
+                            {% if net_total >= 0 %}+{% endif %}{{ net_total|currency_br }}
+                        </div>
+                        <div class="modern-financial-label">Saldo Líquido</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Transactions Table -->
+    {% if transactions %}
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <div class="modern-transactions-header">
+                <h5 class="modern-card-title">
+                    <i class="fas fa-list"></i>
+                    Lista de Transações
+                </h5>
+                <div class="modern-transactions-actions">
+                    <button type="button" class="modern-btn modern-btn-success modern-btn-sm" onclick="openCreateTransactionModal('CREDIT')">
+                        <i class="fas fa-plus"></i>
+                        Nova Entrada
+                    </button>
+                    <button type="button" class="modern-btn modern-btn-danger modern-btn-sm" onclick="openCreateTransactionModal('DEBIT')">
+                        <i class="fas fa-minus"></i>
+                        Nova Saída
+                    </button>
+                    <button type="button" id="suggestCategoriesBtn" class="modern-btn modern-btn-primary modern-btn-sm" onclick="suggestCategories()">
+                        <i class="fas fa-magic"></i>
+                        Sugerir Categorias
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters Section (moved inside the modal) -->
+        <div class="modern-filters-section" style="border-top: 1px solid #e9ecef; padding: 1rem; background-color: #f8f9fa;">
+            <form method="GET" class="modern-filters-form">
+                <div class="row g-2 align-items-end">
+                    <!-- Account Filter -->
+                    <div class="col-md-2">
+                        <label for="account_id" class="form-label form-label-sm">Conta</label>
+                        <div class="multi-select-container" data-name="account_id">
+                            <div class="multi-select-display" data-placeholder="Todas">
+                                <span class="multi-select-placeholder">Todas</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="account_select_all">
+                                    <label for="account_select_all">✓ Selecionar todas</label>
+                                </div>
+                                {% for account in accounts|sort(attribute='name') %}
+                                <div class="multi-select-option" data-value="{{ account.id }}">
+                                    <input type="checkbox" id="account_{{ account.id }}" value="{{ account.id }}" name="account_id" {% if account.id|string in (filters.account_id or []) %}checked{% endif %}>
+                                    <label for="account_{{ account.id }}">{{ account.name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Filter -->
+                    <div class="col-md-2">
+                        <label for="verification_filter" class="form-label form-label-sm">Status</label>
+                        <div class="multi-select-container" data-name="verification_filter">
+                            <div class="multi-select-display" data-placeholder="Todos">
+                                <span class="multi-select-placeholder">Todos</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="verification_select_all">
+                                    <label for="verification_select_all">✓ Selecionar todos</label>
+                                </div>
+                                <div class="multi-select-option" data-value="not_verified">
+                                    <input type="checkbox" id="status_not_verified" value="not_verified" name="verification_filter" {% if 'not_verified' in (filters.verification_filter or []) %}checked{% endif %}>
+                                    <label for="status_not_verified">✗ Não Verificado</label>
+                                </div>
+                                <div class="multi-select-option" data-value="verified">
+                                    <input type="checkbox" id="status_verified" value="verified" name="verification_filter" {% if 'verified' in (filters.verification_filter or []) %}checked{% endif %}>
+                                    <label for="status_verified">✓ Verificado</label>
+                                </div>
+                                <div class="multi-select-option" data-value="with_conflicts">
+                                    <input type="checkbox" id="status_conflicts" value="with_conflicts" name="verification_filter" {% if 'with_conflicts' in (filters.verification_filter or []) %}checked{% endif %}>
+                                    <label for="status_conflicts">⚠ Conflito</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div class="col-md-2">
+                        <label for="user_category" class="form-label form-label-sm">Categoria</label>
+                        <div class="multi-select-container" data-name="user_category">
+                            <div class="multi-select-display" data-placeholder="Todas">
+                                <span class="multi-select-placeholder">Todas</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="category_select_all">
+                                    <label for="category_select_all">✓ Selecionar todas</label>
+                                </div>
+                                <div class="multi-select-option" data-value="__sem_categoria__">
+                                    <input type="checkbox" id="cat_none" value="__sem_categoria__" name="user_category" {% if '__sem_categoria__' in (filters.user_category or []) %}checked{% endif %}>
+                                    <label for="cat_none">Sem Categoria</label>
+                                </div>
+                                {% for cat in user_categories|sort %}
+                                <div class="multi-select-option" data-value="{{ cat }}">
+                                    <input type="checkbox" id="cat_{{ cat }}" value="{{ cat }}" name="user_category" {% if cat in (filters.user_category or []) %}checked{% endif %}>
+                                    <label for="cat_{{ cat }}">{{ cat }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subcategory Filter -->
+                    <div class="col-md-2">
+                        <label for="user_subcategory" class="form-label form-label-sm">Subcategoria</label>
+                        <div class="multi-select-container" data-name="user_subcategory">
+                            <div class="multi-select-display" data-placeholder="Todas">
+                                <span class="multi-select-placeholder">Todas</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="subcategory_select_all">
+                                    <label for="subcategory_select_all">✓ Selecionar todas</label>
+                                </div>
+                                <div class="multi-select-option" data-value="__sem_subcategoria__">
+                                    <input type="checkbox" id="subcat_none" value="__sem_subcategoria__" name="user_subcategory" {% if '__sem_subcategoria__' in (filters.user_subcategory or []) %}checked{% endif %}>
+                                    <label for="subcat_none">Sem Subcategoria</label>
+                                </div>
+                                {% for subcat in user_subcategories|sort %}
+                                <div class="multi-select-option" data-value="{{ subcat }}">
+                                    <input type="checkbox" id="subcat_{{ subcat }}" value="{{ subcat }}" name="user_subcategory" {% if subcat in (filters.user_subcategory or []) %}checked{% endif %}>
+                                    <label for="subcat_{{ subcat }}">{{ subcat }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Filters -->
+                    <div class="col-md-1">
+                        <label for="start_date" class="form-label form-label-sm">Data Inicial</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ filters.start_date if filters.start_date else '' }}" step="1">
+                    </div>
+                    
+                    <div class="col-md-1">
+                        <label for="end_date" class="form-label form-label-sm">Data Final</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="end_date" name="end_date" value="{{ filters.end_date if filters.end_date else '' }}" step="1">
+                    </div>
+                    
+                    <!-- Limit Filter -->
+                    <div class="col-md-1">
+                        <label for="limit" class="form-label form-label-sm">Limite</label>
+                        <select class="form-select form-select-sm" id="limit" name="limit">
+                            <option value="50" {% if filters.limit == 50 %}selected{% endif %}>50</option>
+                            <option value="100" {% if filters.limit == 100 %}selected{% endif %}>100</option>
+                            <option value="200" {% if filters.limit == 200 %}selected{% endif %}>200</option>
+                            <option value="500" {% if filters.limit == 500 %}selected{% endif %}>500</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filter Actions -->
+                    <div class="col-md-1">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm" title="Filtrar">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <a href="{{ url_for('transactions') }}" class="btn btn-outline-secondary btn-sm" title="Limpar">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleAdvancedFilters()" title="Filtros Avançados">
+                                <i class="fas fa-chevron-down" id="advanced-toggle-icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Filters -->
+                <div id="advanced-filters" class="mt-3" style="display: none;">
+                    <div class="row g-2">
+                        <div class="col-md-2">
+                            <label for="modification_start_date" class="form-label form-label-sm">Modificação Inicial</label>
+                            <input type="datetime-local" class="form-control form-control-sm" id="modification_start_date" name="modification_start_date" value="{{ filters.modification_start_date or '' }}" step="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="modification_end_date" class="form-label form-label-sm">Modificação Final</label>
+                            <input type="datetime-local" class="form-control form-control-sm" id="modification_end_date" name="modification_end_date" value="{{ filters.modification_end_date or '' }}" step="1">
+                        </div>
+                        
+                        <!-- Quick Filters -->
+                        <div class="col-md-8">
+                            <label class="form-label form-label-sm">Filtros Rápidos</label>
+                            <div class="d-flex gap-1 flex-wrap">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setModificationCurrentMonth()">
+                                    Modif. Mês Atual
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setModificationLastMonth()">
+                                    Modif. Mês Passado
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setModificationLast30Days()">
+                                    Modif. Últimos 30d
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDataCurrentMonth()">
+                                    Data Mês Atual
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDataLastMonth()">
+                                    Data Mês Passado
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setDataLast30Days()">
+                                    Data Últimos 30d
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modern-card-body">
+            <div class="modern-table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center modern-table-cell-icon">
+                                <span class="modern-table-header-text">Origem</span>
+                            </th>
+                            <th class="text-center sortable modern-table-cell-date" data-column="date" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Data</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="sortable modern-table-cell-description" data-column="description" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Descrição</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="sortable modern-table-cell-account" data-column="account" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Conta</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="sortable modern-table-cell-category" data-column="user_category" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Categoria</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="sortable modern-table-cell-subcategory" data-column="user_subcategory" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Subcategoria</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center sortable modern-table-cell-amount" data-column="amount" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Valor</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center sortable modern-table-cell-date" data-column="modification_date" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Modificação</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center sortable modern-table-cell-verification" data-column="verified" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Verif.</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center sortable modern-table-cell-ignore" data-column="ignored" style="cursor: pointer;">
+                                <div class="modern-table-header-sortable">
+                                    <span>Ignorar</span>
+                                    <i class="fas fa-sort text-muted"></i>
+                                </div>
+                            </th>
+                            <th class="text-center" style="width: 90px;">
+                                % {{ division_names.user1_name if division_names and division_names.user1_name else 'Usuário 1' }}
+                            </th>
+                            <th class="text-center" style="width: 90px;">
+                                % {{ division_names.user2_name if division_names and division_names.user2_name else 'Usuário 2' }}
+                            </th>
+                            <th class="modern-table-cell-actions">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr class="modern-table-row{% if transaction.ignorar_transacao %} modern-table-row-ignored{% endif %}{% if transaction.verified %} modern-table-row-verified{% endif %}">
+                            <td class="text-center modern-table-cell">
+                                {% set is_manual = transaction.connection_name == 'MANUAL' or transaction.item_id == 'manual' or transaction.id.startswith('manual_') %}
+                                {% set has_connection = transaction.connection_name and transaction.connection_name != 'N/A' and transaction.connection_name != 'MANUAL' %}
+                                {% set is_verified = transaction.verified %}
+                                {% set manual_modification = transaction.manual_modification %}
+                                {% set show_manual_icon = is_manual or manual_modification %}
+                                
+                                <div class="modern-transaction-origin">
+                                    {% if has_connection and not is_manual %}
+                                        <i class="fas fa-link text-primary" 
+                                           data-bs-toggle="tooltip" 
+                                           title="Sincronizada via {{ transaction.connection_name }}"></i>
+                                    {% endif %}
+                                    
+                                    {% if show_manual_icon %}
+                                        <i class="fas fa-edit text-warning" 
+                                           data-bs-toggle="tooltip" 
+                                           title="{% if is_manual %}Criada manualmente{% else %}Modificada manualmente{% endif %}"></i>
+                                    {% endif %}
+                                    
+                                    {% if not is_manual and not has_connection %}
+                                        <i class="fas fa-question-circle text-muted" 
+                                           data-bs-toggle="tooltip" 
+                                           title="Origem não identificada"></i>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell">
+                                <div class="modern-transaction-date" style="white-space:nowrap;">
+                                    {{ transaction.date_only or (transaction.transaction_date[:10] if transaction.transaction_date else 'N/A') }}
+                                    {% set time_val = transaction.time_only or (transaction.transaction_date[11:19] if transaction.transaction_date and transaction.transaction_date|length > 10 else '') %}
+                                    {% if time_val %}
+                                        &nbsp;<span class="modern-date-time">{{ time_val }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="modern-table-cell" style="min-width: 140px;">
+                                <div class="modern-transaction-description">
+                                    {{ transaction.description or 'Sem descrição' }}
+                                </div>
+                            </td>
+                            <td class="modern-table-cell">
+                                <div class="modern-account-info">
+                                    <i class="fas fa-university"></i>
+                                    <span>{{ transaction.account_full_name or transaction.account_name }}</span>
+                                </div>
+                            </td>
+                            <td class="modern-table-cell">
+                                {% if transaction.verified %}
+                                    {% if transaction.user_category %}
+                                        <span class="modern-badge modern-badge-primary">{{ transaction.user_category }}</span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                {% else %}
+                                    <select class="modern-form-control modern-form-control-sm category-dropdown" 
+                                            data-transaction-id="{{ transaction.id }}" 
+                                            data-field="user_category"
+                                            data-current-value="{{ transaction.user_category or '' }}"
+                                            data-verified="{{ transaction.verified or 0 }}"
+                                            {% if transaction.verified %}disabled{% endif %}>
+                                        <option value=""></option>
+                                    </select>
+                                {% endif %}
+                            </td>
+                            <td class="modern-table-cell">
+                                {% if transaction.verified %}
+                                    {% if transaction.user_subcategory %}
+                                        <span class="modern-badge modern-badge-secondary">{{ transaction.user_subcategory }}</span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                {% else %}
+                                    <select class="modern-form-control modern-form-control-sm subcategory-dropdown" 
+                                            data-transaction-id="{{ transaction.id }}" 
+                                            data-field="user_subcategory"
+                                            data-current-value="{{ transaction.user_subcategory or '' }}"
+                                            data-verified="{{ transaction.verified or 0 }}"
+                                            {% if transaction.verified %}disabled{% endif %}>
+                                        <option value=""></option>
+                                    </select>
+                                {% endif %}
+                            </td>
+                            <td class="text-center modern-table-cell">
+                                <div class="modern-transaction-amount {% if transaction.type == 'CREDIT' %}modern-amount-positive{% else %}modern-amount-negative{% endif %}">
+                                    {% if transaction.type == 'CREDIT' %}+{% else %}-{% endif %}{{ transaction.amount|currency_br }}
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell">
+                                <div class="modern-modification-date" style="white-space:nowrap;">
+                                    {% if transaction.modification_date %}
+                                        {{ transaction.modification_date[:10] }}
+                                        {% if transaction.modification_date|length > 10 %}
+                                            &nbsp;<span class="modern-date-time">{{ transaction.modification_date[11:19] }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell verification-cell {% if transaction.verified %}verified-cell{% endif %}" style="width: 80px;">
+                                <div class="modern-verification-controls">
+                                    <div class="modern-checkbox-wrapper">
+                                        <input class="modern-checkbox verification-checkbox" 
+                                               type="checkbox" 
+                                               id="verify_{{ transaction.id }}"
+                                               data-transaction-id="{{ transaction.id }}"
+                                               {% if transaction.verified %}checked{% endif %}
+                                               title="Marcar como verificada">
+                                        <label for="verify_{{ transaction.id }}" class="modern-checkbox-label"></label>
+                                    </div>
+                                    {% if transaction.conflict_detected %}
+                                        <i class="fas fa-exclamation-triangle text-warning modern-conflict-icon" 
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-html="true"
+                                           title="<strong>Conflito:</strong><br/>{{ transaction.conflict_log|replace('\n', '<br/>')|safe }}"></i>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell ignore-cell {% if transaction.ignorar_transacao %}ignored-cell{% endif %}" style="width: 80px;">
+                                <div class="modern-checkbox-wrapper">
+                                    <input class="modern-checkbox ignore-checkbox" 
+                                           type="checkbox" 
+                                           id="ignore_{{ transaction.id }}"
+                                           data-transaction-id="{{ transaction.id }}"
+                                           {% if transaction.ignorar_transacao %}checked{% endif %}
+                                           title="Ignorar nos cálculos">
+                                    <label for="ignore_{{ transaction.id }}" class="modern-checkbox-label"></label>
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell" style="width: 110px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control form-control-sm tx-split-u1" min="0" max="100" step="10" style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;" 
+                                           data-transaction-id="{{ transaction.id }}"
+                         value="{{ (transaction.user1_percent if transaction.user1_percent is not none else  (transaction.user2_percent is not none and (100 - transaction.user2_percent) or 50))|int }}" {% if transaction.verified %}disabled{% endif %}>
+                                    <button class="btn btn-outline-secondary tx-split-max-u1" type="button" title="Definir {{ division_names.user1_name if division_names and division_names.user1_name else 'Usuário 1' }} = 100%" {% if transaction.verified %}disabled{% endif %}>
+                                        <i class="fas fa-bolt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-center modern-table-cell" style="width: 110px;">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control form-control-sm tx-split-u2" min="0" max="100" step="10" readonly style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;"
+                                           data-transaction-id="{{ transaction.id }}"
+                         value="{{ (transaction.user2_percent if transaction.user2_percent is not none else  (transaction.user1_percent is not none and (100 - transaction.user1_percent) or 50))|int }}" {% if transaction.verified %}disabled{% endif %}>
+                                    <button class="btn btn-outline-secondary tx-split-max-u2" type="button" title="Definir {{ division_names.user2_name if division_names and division_names.user2_name else 'Usuário 2' }} = 100%" {% if transaction.verified %}disabled{% endif %}>
+                                        <i class="fas fa-bolt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="modern-table-cell">
+                                <div class="modern-action-buttons">
+                                    <a href="{{ url_for('edit_transaction', transaction_id=transaction.id) }}" 
+                                       class="modern-btn modern-btn-sm modern-btn-primary" 
+                                       title="Editar transação">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="modern-btn modern-btn-sm modern-btn-danger" 
+                                            onclick="deleteTransaction('{{ transaction.id }}')" 
+                                            title="Excluir transação">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Info -->
+    <div class="modern-results-info">
+        <div class="modern-results-text">
+            <i class="fas fa-info-circle"></i>
+            Mostrando {{ transactions|length|integer_br }} transações
+            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter %}
+            com filtros aplicados
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="modern-empty-state">
+        <div class="modern-empty-icon">
+            <i class="fas fa-exchange-alt"></i>
+        </div>
+        <h4 class="modern-empty-title">Nenhuma transação encontrada</h4>
+        <p class="modern-empty-description">
+            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter %}
+            Tente ajustar os filtros ou limpar a pesquisa.
+            {% else %}
+            Sincronize sua conta para ver as transações.
+            {% endif %}
+        </p>
+        {% if not (filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter) %}
+        <button class="modern-btn modern-btn-primary" onclick="syncAccount()">
+            <i class="fas fa-sync-alt"></i>
+            Sincronizar Agora
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Edição de Transação -->
+<div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTransactionModalLabel">
+                    <i class="fas fa-edit me-2"></i>Editar Transação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Informações da Transação -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <small class="text-muted">
+                            <strong>ID da Transação:</strong>
+                        </small>
+                        <div class="input-group input-group-sm mt-1">
+                            <input type="text" class="form-control form-control-sm" id="transaction_info_id" 
+                                   value="-" readonly style="font-family: monospace; font-size: 11px;">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" 
+                                    onclick="copyTransactionId()" title="Copiar ID">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <small class="text-muted">
+                            <strong>Última Modificação:</strong>
+                            <span id="transaction_info_modification">-</span>
+                        </small>
+                    </div>
+                </div>
+                
+                <hr class="mb-3">
+                
+                <form id="editTransactionForm">
+                    <input type="hidden" id="edit_transaction_id" name="transaction_id">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="edit_amount" class="form-label">Valor</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" class="form-control" id="edit_amount" name="amount" 
+                                       placeholder="0,00" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="edit_type" class="form-label">Tipo</label>
+                            <select class="form-select" id="edit_type" name="type" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="CREDIT">Entrada (+)</option>
+                                <option value="DEBIT">Saída (-)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="edit_transaction_date" class="form-label">Data da Transação</label>
+                            <input type="datetime-local" class="form-control" id="edit_transaction_date" 
+                                   name="transaction_date" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="edit_description" class="form-label">Descrição</label>
+                            <input type="text" class="form-control" id="edit_description" name="description" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="edit_category" class="form-label">Categoria API (referência)</label>
+                            <input type="text" class="form-control" id="edit_category" name="category" readonly style="background-color: #f8f9fa;">
+                            <small class="text-muted">Categoria original fornecida pela API</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="edit_account_id" class="form-label">Conta</label>
+                            <select class="form-select" id="edit_account_id" name="account_id">
+                                <option value="">Selecione uma conta</option>
+                                {% for account in accounts %}
+                                <option value="{{ account.id }}">{{ account.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="edit_user_category" class="form-label">Categoria</label>
+                            <select class="form-select" id="edit_user_category" name="user_category">
+                                <option value="">Selecione uma categoria</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="edit_user_subcategory" class="form-label">Subcategoria</label>
+                            <select class="form-select" id="edit_user_subcategory" name="user_subcategory">
+                                <option value="">Selecione uma subcategoria</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="saveTransactionBtn">
+                    <i class="fas fa-save me-1"></i>Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Nova Transação -->
+<div class="modal fade" id="createTransactionModal" tabindex="-1" aria-labelledby="createTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTransactionModalLabel">
+                    <i class="fas fa-plus me-2"></i>Nova Transação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTransactionForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="create_type" class="form-label">Tipo</label>
+                            <select class="form-select" id="create_type" name="type" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="CREDIT">Entrada (+)</option>
+                                <option value="DEBIT">Saída (-)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="create_amount" class="form-label">Valor</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" class="form-control" id="create_amount" name="amount" 
+                                       placeholder="0,00" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="create_transaction_date" class="form-label">Data da Transação</label>
+                            <input type="datetime-local" class="form-control" id="create_transaction_date" 
+                                   name="transaction_date" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="create_account_id" class="form-label">Conta</label>
+                            <select class="form-select" id="create_account_id" name="account_id" required>
+                                <option value="">Selecione uma conta</option>
+                                {% for account in accounts %}
+                                <option value="{{ account.id }}">{{ account.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="create_description" class="form-label">Descrição</label>
+                            <input type="text" class="form-control" id="create_description" name="description" 
+                                   placeholder="Descrição da transação" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="create_category" class="form-label">Categoria (opcional)</label>
+                            <input type="text" class="form-control" id="create_category" name="category"
+                                   placeholder="Ex: Alimentação, Transporte, etc.">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="createTransactionBtn">
+                    <i class="fas fa-save me-1"></i>Criar Transação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteTransactionModal" tabindex="-1" aria-labelledby="deleteTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTransactionModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza de que deseja excluir esta transação?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Esta ação não pode ser desfeita!</strong>
+                </div>
+                <div id="deleteTransactionInfo" class="mt-3">
+                    <!-- Informações da transação a ser excluída -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteTransactionBtn">
+                    <i class="fas fa-trash me-1"></i>Excluir Transação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para o Modal de Edição -->
+<script>
+// Funções auxiliares para formatação de data
+function pad2(n) { return n < 10 ? '0' + n : n; }
+
+function formatDate(date) {
+    // Retorna no formato YYYY-MM-DDTHH:MM (hora 00:00)
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) + 'T00:00';
+}
+
+function formatDateTime(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) + 'T' + pad2(date.getHours()) + ':' + pad2(date.getMinutes());
+}
+
+function todayDateTime() {
+    const now = new Date();
+    return now.toISOString().slice(0,16);
+}
+
+// Funções para filtros de data de modificação
+function setModificationCurrentMonth() {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0);
+    document.getElementById('modification_start_date').value = formatDateTime(first);
+    document.getElementById('modification_end_date').value = todayDateTime();
+}
+
+function setModificationLastMonth() {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0);
+    const last = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59);
+    document.getElementById('modification_start_date').value = formatDateTime(first);
+    document.getElementById('modification_end_date').value = formatDateTime(last);
+}
+
+function setModificationLast30Days() {
+    const now = new Date();
+    const past = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    past.setHours(0,0,0,0);
+    document.getElementById('modification_start_date').value = formatDateTime(past);
+    document.getElementById('modification_end_date').value = todayDateTime();
+}
+
+// Funções para filtros de data da transação
+function setDataCurrentMonth() {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0);
+    document.getElementById('start_date').value = formatDateTime(first);
+    document.getElementById('end_date').value = todayDateTime();
+}
+
+function setDataLastMonth() {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0);
+    const last = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59);
+    document.getElementById('start_date').value = formatDateTime(first);
+    document.getElementById('end_date').value = formatDateTime(last);
+}
+
+function setDataLast30Days() {
+    const now = new Date();
+    const past = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    past.setHours(0,0,0,0);
+    document.getElementById('start_date').value = formatDateTime(past);
+    document.getElementById('end_date').value = todayDateTime();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Função para formatar valor para moeda brasileira
+    function formatCurrencyBR(value) {
+        if (!value) return '0,00';
+        
+        // Remove caracteres não numéricos, exceto vírgula
+        let cleanValue = value.toString().replace(/[^\d,]/g, '');
+        
+        // Se não tem vírgula, adiciona ,00
+        if (!cleanValue.includes(',')) {
+            cleanValue = cleanValue + ',00';
+        }
+        
+        // Separa parte inteira da decimal
+        let parts = cleanValue.split(',');
+        let integerPart = parts[0] || '0';
+        let decimalPart = parts[1] || '00';
+        
+        // Limita decimal a 2 dígitos
+        decimalPart = decimalPart.substring(0, 2).padEnd(2, '0');
+        
+        // Adiciona pontos a cada 3 dígitos na parte inteira
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        return integerPart + ',' + decimalPart;
+    }
+    
+    // Função para converter valor brasileiro para número
+    function parseCurrencyBR(value) {
+        if (!value) return 0;
+        
+        // Remove R$, espaços e pontos (separadores de milhares)
+        let cleanValue = value.replace(/[R$\s\.]/g, '');
+        
+        // Substitui vírgula por ponto
+        cleanValue = cleanValue.replace(',', '.');
+        
+        return parseFloat(cleanValue) || 0;
+    }
+    
+    // Função para converter número para formato brasileiro
+    function numberToCurrencyBR(number) {
+        if (typeof number !== 'number') {
+            number = parseFloat(number) || 0;
+        }
+        
+        return number.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+    
+    // Aplica máscara no campo de valor
+    const amountInput = document.getElementById('edit_amount');
+    const createAmountInput = document.getElementById('create_amount');
+    
+    function setupAmountMask(input) {
+        if (!input) return;
+        
+        input.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            // Remove tudo exceto números e vírgula
+            value = value.replace(/[^\d,]/g, '');
+            
+            // Se há mais de uma vírgula, mantém apenas a primeira
+            let commaIndex = value.indexOf(',');
+            if (commaIndex !== -1) {
+                value = value.substring(0, commaIndex + 1) + value.substring(commaIndex + 1).replace(/,/g, '');
+            }
+            
+            // Limita a parte decimal a 2 dígitos
+            if (value.includes(',')) {
+                let parts = value.split(',');
+                if (parts[1] && parts[1].length > 2) {
+                    parts[1] = parts[1].substring(0, 2);
+                    value = parts[0] + ',' + parts[1];
+                }
+            }
+            
+            // Formata com pontos nos milhares
+            if (value.includes(',')) {
+                let parts = value.split(',');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                value = parts.join(',');
+            } else {
+                value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            }
+            
+            e.target.value = value;
+        });
+        
+        // Garante formato correto ao sair do campo
+        input.addEventListener('blur', function(e) {
+            let value = e.target.value;
+            if (value && !value.includes(',')) {
+                e.target.value = value + ',00';
+            }
+        });
+    }
+    
+    setupAmountMask(amountInput);
+    setupAmountMask(createAmountInput);
+    
+    // Função para formatar data e hora
+    function formatDateTime(dateTimeString) {
+        if (!dateTimeString) return 'Não disponível';
+        
+        try {
+            const date = new Date(dateTimeString);
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Sao_Paulo'
+            };
+            return date.toLocaleDateString('pt-BR', options);
+        } catch (e) {
+            return dateTimeString;
+        }
+    }
+    
+    // Função para copiar ID da transação
+    function copyTransactionId() {
+        const idField = document.getElementById('transaction_info_id');
+        idField.select();
+        idField.setSelectionRange(0, 99999); // Para dispositivos móveis
+        
+        navigator.clipboard.writeText(idField.value).then(function() {
+            // Feedback visual
+            const button = document.querySelector('button[onclick="copyTransactionId()"]');
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check text-success"></i>';
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+            }, 1500);
+        }).catch(function(err) {
+            // Fallback para navegadores mais antigos
+            idField.select();
+            document.execCommand('copy');
+            
+            // Feedback visual
+            const button = document.querySelector('button[onclick="copyTransactionId()"]');
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check text-success"></i>';
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+            }, 1500);
+        });
+    }
+    
+    // Interceptar cliques nos botões de editar
+    document.querySelectorAll('a[href*="edit_transaction"]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const href = this.getAttribute('href');
+            const transactionId = href.split('/').pop();
+            openEditModal(transactionId);
+        });
+    });
+    
+    // Variável global para armazenar a data original da transação
+    let originalTransactionDate = null;
+    
+    // Função para abrir o modal de edição
+    function openEditModal(transactionId) {
+        // Buscar dados da transação via AJAX
+        fetch(`/edit_transaction/${transactionId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Armazenar a data original para comparação posterior
+                originalTransactionDate = data.transaction.transaction_date;
+                
+                // Preencher campos informativos
+                document.getElementById('transaction_info_id').value = data.transaction.id;
+                document.getElementById('transaction_info_modification').textContent = 
+                    data.transaction.modification_date ? formatDateTime(data.transaction.modification_date) : 'Não disponível';
+                
+                // Preencher o formulário do modal
+                document.getElementById('edit_transaction_id').value = data.transaction.id;
+                // Valor já armazenado como absoluto no banco
+                document.getElementById('edit_amount').value = numberToCurrencyBR(Math.abs(data.transaction.amount));
+                document.getElementById('edit_type').value = data.transaction.type || '';
+                document.getElementById('edit_description').value = data.transaction.description || '';
+                document.getElementById('edit_category').value = data.transaction.category || '';
+                document.getElementById('edit_account_id').value = data.transaction.account_id || '';
+                
+                // Carregar categorias disponíveis e depois preencher os campos
+                loadUserCategories().then(() => {
+                    // Recarregar categorias baseadas no tipo de transação
+                    populateCategorySelect(data.transaction.type);
+                    
+                    // Preencher campos de categoria do usuário após carregar as opções
+                    document.getElementById('edit_user_category').value = data.transaction.user_category || '';
+                    document.getElementById('edit_user_subcategory').value = data.transaction.user_subcategory || '';
+                    
+                    // Disparar evento de mudança para carregar subcategorias se necessário
+                    if (data.transaction.user_category) {
+                        document.getElementById('edit_user_category').dispatchEvent(new Event('change'));
+                    }
+                });
+                
+                // Formatar a data para o input datetime-local
+                if (data.transaction.transaction_date) {
+                    console.log('Data original:', data.transaction.transaction_date);
+                    
+                    let dateTime = data.transaction.transaction_date;
+                    
+                    // Se a data contém espaço, substitui por T
+                    if (dateTime.includes(' ')) {
+                        dateTime = dateTime.replace(' ', 'T');
+                    }
+                    
+                    // Garante formato YYYY-MM-DDTHH:MM
+                    if (dateTime.length > 16) {
+                        dateTime = dateTime.substring(0, 16);
+                    } else if (dateTime.length === 10) {
+                        // Se é apenas data, adiciona horário padrão
+                        dateTime += 'T00:00';
+                    } else if (dateTime.length === 13) {
+                        // Se tem apenas hora, adiciona minutos
+                        dateTime += ':00';
+                    }
+                    
+                    console.log('Data formatada para datetime-local:', dateTime);
+                    
+                    const dateField = document.getElementById('edit_transaction_date');
+                    dateField.value = dateTime;
+                    
+                    console.log('Valor definido no campo:', dateField.value);
+                } else {
+                    console.log('Nenhuma data de transação encontrada');
+                }
+                
+                // Mostrar o modal
+                const modal = new bootstrap.Modal(document.getElementById('editTransactionModal'));
+                modal.show();
+            } else {
+                alert('Erro ao carregar dados da transação: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados da transação');
+        });
+    }
+    
+    // Salvar alterações
+    document.getElementById('saveTransactionBtn').addEventListener('click', function() {
+        const form = document.getElementById('editTransactionForm');
+        const formData = new FormData(form);
+        
+        // Converter valor brasileiro para formato americano
+        const amountBR = formData.get('amount');
+    const amountUS = Math.abs(parseCurrencyBR(amountBR));
+    formData.set('amount', amountUS.toString());
+        
+        // Verificar se a data foi realmente alterada
+        const dateTimeLocal = formData.get('transaction_date');
+        if (dateTimeLocal && originalTransactionDate) {
+            // Converter datetime-local para comparação (YYYY-MM-DD HH:MM)
+            const editedDateTime = dateTimeLocal.replace('T', ' ');
+            
+            // Extrair data+hora:minuto da data original (primeiros 16 caracteres)
+            let originalDateTime = originalTransactionDate;
+            if (originalDateTime.includes('T')) {
+                originalDateTime = originalDateTime.replace('T', ' ');
+            }
+            // Pega apenas YYYY-MM-DD HH:MM (16 caracteres)
+            if (originalDateTime.length > 16) {
+                originalDateTime = originalDateTime.substring(0, 16);
+            }
+            
+            console.log('Data original (HH:MM):', originalDateTime);
+            console.log('Data editada (HH:MM):', editedDateTime);
+            
+            // Se as datas são iguais (mesmo ano-mês-dia hora:minuto), não envia a data
+            if (editedDateTime === originalDateTime) {
+                console.log('Data não foi alterada, mantendo original com segundos');
+                // Remove o campo transaction_date para que o backend preserve a data original
+                formData.delete('transaction_date');
+            } else {
+                console.log('Data foi alterada, enviando nova data');
+                // Converter de YYYY-MM-DDTHH:MM para YYYY-MM-DD HH:MM:SS
+                const formattedDateTime = editedDateTime + ':00';
+                formData.set('transaction_date', formattedDateTime);
+            }
+        } else if (dateTimeLocal) {
+            // Se não tem data original, envia normalmente
+            const formattedDateTime = dateTimeLocal.replace('T', ' ') + ':00';
+            formData.set('transaction_date', formattedDateTime);
+        }
+        
+        fetch(`/edit_transaction/${formData.get('transaction_id')}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar o modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editTransactionModal'));
+                modal.hide();
+                
+                // Recarregar a página mantendo os filtros
+                window.location.reload();
+            } else {
+                alert('Erro ao salvar: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar alterações');
+        });
+    });
+    
+    // Função para atualizar cards de estatísticas
+    function updateStatisticsCards() {
+        const rows = document.querySelectorAll('tbody tr');
+        let stats = {
+            total: 0,
+            verified: 0,
+            notVerified: 0,
+            ignored: 0,
+            conflicts: 0,
+            totalIncome: 0,
+            totalExpense: 0
+        };
+
+        rows.forEach(row => {
+            const verificationCheckbox = row.querySelector('.verification-checkbox');
+            const ignoreCheckbox = row.querySelector('.ignore-checkbox');
+            const conflictIcon = row.querySelector('.modern-conflict-icon');
+            const amountElement = row.querySelector('.modern-transaction-amount');
+
+            stats.total++;
+            stats.verified += verificationCheckbox?.checked ? 1 : 0;
+            stats.notVerified += verificationCheckbox?.checked ? 0 : 1;
+            stats.ignored += ignoreCheckbox?.checked ? 1 : 0;
+            stats.conflicts += conflictIcon ? 1 : 0;
+
+            // Somente não ignoradas contam no financeiro
+            if (!ignoreCheckbox?.checked && amountElement) {
+                const isCredit = amountElement.classList.contains('modern-amount-positive') || amountElement.textContent.trim().startsWith('+');
+                const amountText = amountElement.textContent.trim().replace(/[R$\s\+\-\.]/g, '').replace(',', '.');
+                const value = parseFloat(amountText) || 0;
+                if (value > 0) {
+                    if (isCredit) stats.totalIncome += value; else stats.totalExpense += value;
+                }
+            }
+        });
+
+        // Atualiza números de contagem (mantive a API anterior para compatibilidade caso usado)
+        const totalElement = document.querySelector('.stat-item:nth-child(1) .summary-number');
+        const verifiedElement = document.querySelector('.stat-item:nth-child(2) .summary-number');
+        const notVerifiedElement = document.querySelector('.stat-item:nth-child(3) .summary-number');
+        const ignoredElement = document.querySelector('.stat-item:nth-child(4) .summary-number');
+        const conflictsElement = document.querySelector('.stat-item:nth-child(5) .summary-number');
+        if (totalElement) totalElement.textContent = stats.total.toLocaleString('pt-BR');
+        if (verifiedElement) verifiedElement.textContent = stats.verified.toLocaleString('pt-BR');
+        if (notVerifiedElement) notVerifiedElement.textContent = stats.notVerified.toLocaleString('pt-BR');
+        if (ignoredElement) ignoredElement.textContent = stats.ignored.toLocaleString('pt-BR');
+        if (conflictsElement) conflictsElement.textContent = stats.conflicts.toLocaleString('pt-BR');
+
+        // Atualiza cards financeiros por ID
+        const incomeEl = document.getElementById('card_total_income');
+        const expenseEl = document.getElementById('card_total_expense');
+        const netEl = document.getElementById('card_net_total');
+        const netTotal = stats.totalIncome - stats.totalExpense;
+        if (incomeEl) incomeEl.textContent = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(stats.totalIncome).replace(/^/, 'R$ ');
+        if (expenseEl) expenseEl.textContent = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(stats.totalExpense).replace(/^/, 'R$ ');
+        if (netEl) {
+            netEl.textContent = `${netTotal >= 0 ? '+' : ''}R$ ${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(netTotal))}`;
+            netEl.classList.remove('text-success', 'text-danger');
+            netEl.classList.add(netTotal >= 0 ? 'text-success' : 'text-danger');
+        }
+    }
+    
+    // Função para bloquear/desbloquear dropdowns de categoria baseado no status verificado
+    function toggleCategoryDropdowns(transactionId, isVerified) {
+        const categoryDropdown = document.querySelector(`.category-dropdown[data-transaction-id="${transactionId}"]`);
+        const subcategoryDropdown = document.querySelector(`.subcategory-dropdown[data-transaction-id="${transactionId}"]`);
+        
+        if (categoryDropdown) {
+            categoryDropdown.disabled = isVerified;
+            categoryDropdown.dataset.verified = isVerified ? '1' : '0';
+            
+            // Manter sempre a mesma aparência visual
+            const currentValue = categoryDropdown.value;
+            updateDropdownVisualStyle(categoryDropdown, currentValue);
+            
+            if (isVerified) {
+                categoryDropdown.style.cursor = 'not-allowed';
+            } else {
+                categoryDropdown.style.cursor = '';
+            }
+        }
+        
+        if (subcategoryDropdown) {
+            subcategoryDropdown.disabled = isVerified;
+            subcategoryDropdown.dataset.verified = isVerified ? '1' : '0';
+            
+            // Manter sempre a mesma aparência visual
+            const currentValue = subcategoryDropdown.value;
+            updateDropdownVisualStyle(subcategoryDropdown, currentValue);
+            
+            if (isVerified) {
+                subcategoryDropdown.style.cursor = 'not-allowed';
+            } else {
+                subcategoryDropdown.style.cursor = '';
+            }
+        }
+    }
+    
+    // Função para toggle de ignorar transação
+    function toggleIgnore(checkbox) {
+        const transactionId = checkbox.dataset.transactionId;
+        const isChecked = checkbox.checked;
+        
+        fetch('/toggle_transaction_ignore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                transaction_id: transactionId,
+                ignore: isChecked
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Aplicar/remover classe de linha ignorada
+                const row = checkbox.closest('tr');
+                if (isChecked) {
+                    row.classList.add('ignored-row');
+                } else {
+                    row.classList.remove('ignored-row');
+                }
+                // Se verificado, mantenha/ajuste o estado da célula de verificação
+                const verificationCheckbox = row.querySelector('.verification-checkbox');
+                const verificationCell = row.querySelector('.verification-cell');
+                if (verificationCheckbox?.checked && verificationCell) {
+                    verificationCell.classList.add('verified-cell');
+                }
+                
+                // Mostrar feedback visual rápido
+                row.classList.add('table-warning');
+                setTimeout(() => {
+                    row.classList.remove('table-warning');
+                }, 1000);
+                
+                // Atualizar cards de estatísticas
+                updateStatisticsCards();
+                
+            } else {
+                // Reverter o checkbox em caso de erro
+                checkbox.checked = !isChecked;
+                alert('Erro ao atualizar status de ignorar: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            // Reverter o checkbox em caso de erro
+            checkbox.checked = !isChecked;
+            alert('Erro ao processar status de ignorar');
+        });
+    }
+    
+    // Atualizar função de toggle de verificação para considerar ignorar
+    function toggleVerification(checkbox) {
+        const transactionId = checkbox.dataset.transactionId;
+        const isChecked = checkbox.checked;
+        // Salvar split antes de alterar verificação
+        const row = checkbox.closest('tr');
+        if (row) { try { saveSplitForRow(row); } catch (e) { console.warn('Falha ao salvar split antes da verificação', e); } }
+
+        // Se está marcando como verificado, garantir persistência de sugestão temporária
+        if (isChecked && row) {
+            const catSelect = row.querySelector('.category-dropdown');
+            const subSelect = row.querySelector('.subcategory-dropdown');
+            // Apenas envia se houver valor e o backend ainda não tiver salvo (ephemeral)
+            const ops = [];
+            if (catSelect && catSelect.value) {
+                ops.push(saveInlineCategory(transactionId, 'user_category', catSelect.value));
+            }
+            if (subSelect && subSelect.value) {
+                ops.push(saveInlineCategory(transactionId, 'user_subcategory', subSelect.value));
+            }
+            if (ops.length) {
+                Promise.allSettled(ops).then(()=>{ /* silencioso */ });
+            }
+        }
+
+        fetch('/toggle_transaction_verification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                transaction_id: transactionId,
+                verified: isChecked
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Aplicar/remover classe de linha verificada
+                const row = checkbox.closest('tr');
+                const ignoreCheckbox = row.querySelector('.ignore-checkbox');
+                const verificationCell = row.querySelector('.verification-cell');
+                
+                // Bloquear/desbloquear dropdowns de categoria baseado no status verificado
+                toggleCategoryDropdowns(transactionId, isChecked);
+                // Bloquear/desbloquear campos de divisão
+                lockUnlockSplitFields(row, isChecked);
+                
+                // Aplicar/remover classe de verificado independentemente do ignorado
+                if (isChecked) {
+                    row.classList.add('verified-row');
+                } else {
+                    row.classList.remove('verified-row');
+                }
+
+                // Sempre refletir estado na célula Verif.
+                if (verificationCell) {
+                    if (isChecked && (!ignoreCheckbox || !ignoreCheckbox.checked)) {
+                        verificationCell.classList.add('verified-cell');
+                    } else {
+                        verificationCell.classList.remove('verified-cell');
+                    }
+                }
+                
+                // Mostrar feedback visual rápido
+                row.classList.add('table-success');
+                setTimeout(() => {
+                    row.classList.remove('table-success');
+                }, 1000);
+                
+                // Atualizar cards de estatísticas
+                updateStatisticsCards();
+                
+            } else {
+                // Reverter o checkbox em caso de erro
+                checkbox.checked = !isChecked;
+                alert('Erro ao atualizar verificação: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            // Reverter o checkbox em caso de erro
+            checkbox.checked = !isChecked;
+            alert('Erro ao processar verificação');
+        });
+    }
+
+    // Função para bloquear / desbloquear campos de divisão ao verificar
+    function lockUnlockSplitFields(row, lock) {
+        if (!row) return;
+        const u1 = row.querySelector('.tx-split-u1');
+        const u2 = row.querySelector('.tx-split-u2');
+        const b1 = row.querySelector('.tx-split-max-u1');
+        const b2 = row.querySelector('.tx-split-max-u2');
+        [u1, u2, b1, b2].forEach(el => { if (el) { el.disabled = lock; if (lock) { el.classList.add('split-locked'); } else { el.classList.remove('split-locked'); } } });
+    }
+    
+    // Variável para controlar a direção da classificação
+    let sortState = {};
+    
+    // Função para classificar tabela
+    function sortTable(column) {
+        const table = document.querySelector('table tbody');
+        const rows = Array.from(table.querySelectorAll('tr'));
+        
+        // Alternar direção da classificação
+        if (!sortState[column]) {
+            sortState[column] = 'asc';
+        } else {
+            sortState[column] = sortState[column] === 'asc' ? 'desc' : 'asc';
+        }
+        
+        const isAscending = sortState[column] === 'asc';
+        
+        // Atualizar ícones do cabeçalho
+        document.querySelectorAll('.sortable i').forEach(icon => {
+            icon.className = 'fas fa-sort text-muted';
+        });
+        
+        const currentHeader = document.querySelector(`th[data-column="${column}"] i`);
+        currentHeader.className = isAscending ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
+        
+        // Função para obter valor da célula para comparação
+        function getCellValue(row, column) {
+            const columnIndex = getColumnIndex(column);
+            const cell = row.cells[columnIndex];
+            
+            switch (column) {
+                case 'date':
+                case 'modification_date':
+                    // Para datas, extrair tanto a data quanto a hora do formato YYYY-MM-DD HH:MM:SS
+                    const fullDateText = cell.textContent.trim();
+                    console.log('Debug data - Column:', column, 'Text:', fullDateText);
+                    
+                    // Buscar padrão YYYY-MM-DD seguido opcionalmente por HH:MM:SS ou HH:MM
+                    const dateTimeMatch = fullDateText.match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+                    if (dateTimeMatch) {
+                        const year = parseInt(dateTimeMatch[1]);
+                        const month = parseInt(dateTimeMatch[2]);
+                        const day = parseInt(dateTimeMatch[3]);
+                        const hour = parseInt(dateTimeMatch[4]) || 0;
+                        const minute = parseInt(dateTimeMatch[5]) || 0;
+                        const second = parseInt(dateTimeMatch[6]) || 0;
+                        
+                        const date = new Date(year, month - 1, day, hour, minute, second);
+                        console.log('Parsed date:', date, 'Timestamp:', date.getTime());
+                        return date.getTime();
+                    }
+                    // Se não conseguir fazer parse no formato padrão, tentar DD/MM/YYYY (fallback)
+                    const fallbackMatch = fullDateText.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+                    if (fallbackMatch) {
+                        const day = parseInt(fallbackMatch[1]);
+                        const month = parseInt(fallbackMatch[2]);
+                        const year = parseInt(fallbackMatch[3]);
+                        const hour = parseInt(fallbackMatch[4]) || 0;
+                        const minute = parseInt(fallbackMatch[5]) || 0;
+                        const second = parseInt(fallbackMatch[6]) || 0;
+                        
+                        const date = new Date(year, month - 1, day, hour, minute, second);
+                        console.log('Fallback parsed date:', date, 'Timestamp:', date.getTime());
+                        return date.getTime();
+                    }
+                    // Se ainda não conseguir, tentar apenas a data no formato YYYY-MM-DD
+                    const dateOnlyMatch = fullDateText.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+                    if (dateOnlyMatch) {
+                        const year = parseInt(dateOnlyMatch[1]);
+                        const month = parseInt(dateOnlyMatch[2]);
+                        const day = parseInt(dateOnlyMatch[3]);
+                        const date = new Date(year, month - 1, day);
+                        console.log('Date only parsed:', date, 'Timestamp:', date.getTime());
+                        return date.getTime();
+                    }
+                    console.log('Failed to parse date:', fullDateText);
+                    return 0;
+                    
+                case 'amount':
+                    // Para valores, converter para número considerando formato brasileiro
+                    const amountText = cell.textContent.trim();
+                    // Detectar se é entrada (+) ou saída (-)
+                    const isPositive = amountText.startsWith('+') || !amountText.startsWith('-');
+                    // Remover R$, sinais, espaços e pontos (separadores de milhares), depois trocar vírgula por ponto
+                    const cleanValue = amountText.replace(/[R$\s\+\-\.]/g, '').replace(',', '.');
+                    const value = parseFloat(cleanValue) || 0;
+                    return isPositive ? value : -value;
+                    
+                case 'verified':
+                    // Para verificação, checar se o checkbox está marcado
+                    const verifyCheckbox = cell.querySelector('.verification-checkbox');
+                    return verifyCheckbox ? (verifyCheckbox.checked ? 1 : 0) : 0;
+                    
+                case 'ignored':
+                    // Para ignorar, checar se o checkbox está marcado
+                    const ignoreCheckbox = cell.querySelector('.ignore-checkbox');
+                    return ignoreCheckbox ? (ignoreCheckbox.checked ? 1 : 0) : 0;
+                    
+                case 'description':
+                case 'account':
+                case 'connection':
+                case 'category':
+                default:
+                    // Para texto, usar toLowerCase para comparação
+                    return cell.textContent.trim().toLowerCase();
+            }
+        }
+        
+        function getColumnIndex(column) {
+            switch (column) {
+                case 'date': return 1;  // +1 devido à nova coluna Origem
+                case 'description': return 2;
+                case 'account': return 3;
+                case 'connection': return 4;
+                case 'category': return 5;
+                case 'amount': return 6;
+                case 'modification_date': return 7;
+                case 'verified': return 8;
+                case 'ignored': return 9;
+                default: return 1;
+            }
+        }
+        
+        // Classificar as linhas
+        rows.sort((a, b) => {
+            const valueA = getCellValue(a, column);
+            const valueB = getCellValue(b, column);
+            
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+                return isAscending ? valueA - valueB : valueB - valueA;
+            } else {
+                if (valueA < valueB) return isAscending ? -1 : 1;
+                if (valueA > valueB) return isAscending ? 1 : -1;
+                return 0;
+            }
+        });
+        
+        // Remover linhas existentes e adicionar as ordenadas
+        rows.forEach(row => table.removeChild(row));
+        rows.forEach(row => table.appendChild(row));
+        
+        // Atualizar cards após reordenação
+        updateStatisticsCards();
+    }
+    
+    // Adicionar event listeners para classificação
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('th.sortable')) {
+            const column = e.target.closest('th.sortable').dataset.column;
+            sortTable(column);
+        }
+    });
+    
+    // Adicionar event listeners para os checkboxes e divisão
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('verification-checkbox')) {
+            toggleVerification(e.target);
+        } else if (e.target.classList.contains('ignore-checkbox')) {
+            toggleIgnore(e.target);
+        } else if (e.target.classList.contains('tx-split-u1')) {
+            handleSplitInput(e.target);
+        }
+    });
+
+    // Botões de atalho 100%/0% para divisão por transação
+    document.addEventListener('click', function(e) {
+        const maxU1Btn = e.target.closest('.tx-split-max-u1');
+        const maxU2Btn = e.target.closest('.tx-split-max-u2');
+        if (maxU1Btn) {
+            const row = maxU1Btn.closest('tr');
+            const u1 = row.querySelector('.tx-split-u1');
+            const u2 = row.querySelector('.tx-split-u2');
+            if (u1 && u2) {
+                u1.value = '100';
+                u2.value = '0';
+                handleSplitInput(u1);
+            }
+        } else if (maxU2Btn) {
+            const row = maxU2Btn.closest('tr');
+            const u1 = row.querySelector('.tx-split-u1');
+            const u2 = row.querySelector('.tx-split-u2');
+            if (u1 && u2) {
+                u1.value = '0';
+                u2.value = '100';
+                // Usa handleSplitInput para salvar e atualizar complementares
+                handleSplitInput(u1);
+            }
+        }
+    });
+
+    // Funções para percentuais de divisão por transação
+    function sanitizePercent(value) {
+        let v = parseFloat(value);
+        if (isNaN(v)) v = 0;
+        if (v < 0) v = 0;
+        if (v > 100) v = 100;
+    // Arredonda para inteiro e ajusta para múltiplos de 10
+    v = Math.round(v);
+    v = Math.round(v / 10) * 10;
+        if (v < 0) v = 0; if (v > 100) v = 100;
+        return v;
+    }
+
+    function handleSplitInput(input) {
+        const row = input.closest('tr');
+        const u1Input = input;
+        const u2Input = row.querySelector('.tx-split-u2');
+        const p1 = sanitizePercent(u1Input.value);
+        const p2 = 100 - p1;
+        u1Input.value = p1.toString();
+        if (u2Input) u2Input.value = p2.toString();
+
+        // Salvar via API
+        saveSplitForRow(row);
+    }
+
+    function saveSplitForRow(row) {
+        const u1 = row.querySelector('.tx-split-u1');
+        const u2 = row.querySelector('.tx-split-u2');
+        const txId = u1?.dataset.transactionId || u2?.dataset.transactionId;
+        if (!txId || !u1 || !u2) return;
+        const p1 = sanitizePercent(u1.value);
+        const p2 = 100 - p1;
+        fetch(`/transactions/${txId}/split`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ user1_percent: p1, user2_percent: p2 })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Erro ao salvar divisão:', data.message);
+            }
+        })
+        .catch(err => console.error('Erro ao salvar divisão:', err));
+    }
+    
+    // Inicializar tooltips do Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Calcular estatísticas iniciais dos cards
+    updateStatisticsCards();
+
+    // Aplicar bloqueio inicial aos splits já verificados
+    document.querySelectorAll('tr').forEach(row => {
+        const vcb = row.querySelector('.verification-checkbox');
+        if (vcb && vcb.checked) { lockUnlockSplitFields(row, true); }
+    });
+    
+    // Função para obter data/hora atual no horário de Brasília
+    function getBrasiliaDateTime() {
+        const now = new Date();
+        
+        // Usar Intl.DateTimeFormat para obter hora de Brasília
+        const brasiliaDateTime = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(now);
+        
+        // Converter formato "2025-08-08 11:16" para "2025-08-08T11:16"
+        return brasiliaDateTime.replace(' ', 'T');
+    }
+    
+    // Função para abrir modal de criação de transação
+    window.openCreateTransactionModal = function(transactionType = null) {
+        // Limpar o formulário
+        document.getElementById('createTransactionForm').reset();
+        
+        // Definir data/hora atual no horário de Brasília
+        const brasiliaDateTime = getBrasiliaDateTime();
+        document.getElementById('create_transaction_date').value = brasiliaDateTime;
+        
+        // Se tipo foi especificado, definir automaticamente
+        if (transactionType) {
+            document.getElementById('create_type').value = transactionType;
+            
+            // Opcional: Bloquear o campo tipo para evitar mudanças acidentais
+            document.getElementById('create_type').disabled = true;
+            
+            // Atualizar o título do modal baseado no tipo
+            const modalTitle = document.getElementById('createTransactionModalLabel');
+            const typeText = transactionType === 'CREDIT' ? 'Entrada' : 'Saída';
+            const icon = transactionType === 'CREDIT' ? 'fas fa-plus' : 'fas fa-minus';
+            modalTitle.innerHTML = `<i class="${icon} me-2"></i>Nova ${typeText}`;
+        } else {
+            // Se não foi especificado, habilitar o campo
+            document.getElementById('create_type').disabled = false;
+            document.getElementById('createTransactionModalLabel').innerHTML = '<i class="fas fa-plus me-2"></i>Nova Transação';
+        }
+        
+        // Mostrar o modal
+        const modal = new bootstrap.Modal(document.getElementById('createTransactionModal'));
+        modal.show();
+    };
+    
+    // Event listener para reabilitar campo tipo quando modal for fechado
+    document.getElementById('createTransactionModal').addEventListener('hidden.bs.modal', function() {
+        // Reabilitar o campo tipo e restaurar título padrão
+        document.getElementById('create_type').disabled = false;
+        document.getElementById('createTransactionModalLabel').innerHTML = '<i class="fas fa-plus me-2"></i>Nova Transação';
+    });
+    
+    // Função para criar nova transação
+    document.getElementById('createTransactionBtn').addEventListener('click', function() {
+        const form = document.getElementById('createTransactionForm');
+        const formData = new FormData(form);
+        
+        // Validar campos obrigatórios
+        const requiredFields = ['type', 'amount', 'transaction_date', 'account_id', 'description'];
+        let missingFields = [];
+        
+        for (const field of requiredFields) {
+            if (!formData.get(field) || formData.get(field).trim() === '') {
+                missingFields.push(field);
+            }
+        }
+        
+        if (missingFields.length > 0) {
+            alert('Por favor, preencha todos os campos obrigatórios.');
+            return;
+        }
+        
+        // Converter valor brasileiro para formato americano
+        const amountBR = formData.get('amount');
+    const amountUS = Math.abs(parseCurrencyBR(amountBR));
+    formData.set('amount', amountUS.toString());
+        
+        // Converter datetime-local para formato do banco
+        const dateTimeLocal = formData.get('transaction_date');
+        const formattedDateTime = dateTimeLocal.replace('T', ' ') + ':00';
+        formData.set('transaction_date', formattedDateTime);
+        
+        fetch('/transactions/create', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar o modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createTransactionModal'));
+                modal.hide();
+                
+                // Recarregar a página mantendo os filtros
+                window.location.reload();
+            } else {
+                alert('Erro ao criar transação: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao criar transação');
+        });
+    });
+    
+    // Função para excluir transação
+    window.deleteTransaction = function(transactionId) {
+        // Buscar informações da transação
+        fetch(`/edit_transaction/${transactionId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const transaction = data.transaction;
+                
+                // Preencher informações no modal
+                const infoDiv = document.getElementById('deleteTransactionInfo');
+                infoDiv.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">${transaction.description || 'Sem descrição'}</h6>
+                            <p class="card-text">
+                                <strong>Valor:</strong> R$ ${numberToCurrencyBR(transaction.amount)}<br>
+                                <strong>Data:</strong> ${formatDateTime(transaction.transaction_date)}<br>
+                                <strong>Conta:</strong> ${transaction.account_name || 'N/A'}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                // Configurar botão de confirmação
+                const confirmBtn = document.getElementById('confirmDeleteTransactionBtn');
+                confirmBtn.onclick = function() {
+                    performDeleteTransaction(transactionId);
+                };
+                
+                // Mostrar modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteTransactionModal'));
+                modal.show();
+            } else {
+                alert('Erro ao carregar dados da transação: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados da transação');
+        });
+    };
+    
+    // Função para executar a exclusão
+    function performDeleteTransaction(transactionId) {
+        fetch(`/transactions/${transactionId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteTransactionModal'));
+                modal.hide();
+                
+                // Recarregar página
+                window.location.reload();
+            } else {
+                alert('Erro ao excluir transação: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao excluir transação');
+        });
+    }
+    
+    // Funções para gerenciar categorias de usuário
+    let userCategories = [];
+    
+    async function loadUserCategories() {
+        try {
+            const response = await fetch('/api/categories');
+            const data = await response.json();
+            
+            if (data.success) {
+                userCategories = data.categories;
+                populateCategorySelect();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+            return false;
+        }
+    }
+    
+    function populateCategorySelect(transactionType = null) {
+        const categorySelect = document.getElementById('edit_user_category');
+        const subcategorySelect = document.getElementById('edit_user_subcategory');
+        
+        // Limpar opções existentes
+        categorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
+        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
+        
+        // Se não foi passado tipo, tentar detectar do campo tipo no modal
+        if (!transactionType) {
+            const typeSelect = document.getElementById('edit_type');
+            transactionType = typeSelect ? typeSelect.value : null;
+        }
+        
+        // Filtrar categorias por tipo se disponível
+        let filteredCategories = userCategories;
+        if (transactionType) {
+            filteredCategories = userCategories.filter(cat => cat.transaction_type === transactionType);
+        }
+        
+        // Obter categorias únicas
+        const uniqueCategories = [...new Set(filteredCategories.map(cat => cat.name))];
+        
+        uniqueCategories.forEach(categoryName => {
+            const categoryData = filteredCategories.find(cat => cat.name === categoryName);
+            const option = document.createElement('option');
+            option.value = categoryName;
+            option.textContent = categoryName;
+            // Aplicar apenas borda colorida para modal
+            option.style.borderLeft = `4px solid ${categoryData.color || '#6c757d'}`;
+            option.style.paddingLeft = '12px';
+            categorySelect.appendChild(option);
+        });
+        
+        // Aplicar estilo discreto ao select do modal
+        categorySelect.style.borderLeft = categorySelect.value ? 
+            `4px solid ${filteredCategories.find(cat => cat.name === categorySelect.value)?.color || '#6c757d'}` : '';
+    }
+    
+    // Event listener para mudança de categoria
+    document.getElementById('edit_user_category').addEventListener('change', function() {
+        const selectedCategory = this.value;
+        const subcategorySelect = document.getElementById('edit_user_subcategory');
+        
+        // Obter tipo de transação atual
+        const typeSelect = document.getElementById('edit_type');
+        const transactionType = typeSelect ? typeSelect.value : null;
+        
+        // Filtrar categorias por tipo se disponível
+        let filteredCategories = userCategories;
+        if (transactionType) {
+            filteredCategories = userCategories.filter(cat => cat.transaction_type === transactionType);
+        }
+        
+        // Aplicar borda colorida no select principal
+        if (selectedCategory) {
+            const categoryData = filteredCategories.find(cat => cat.name === selectedCategory);
+            this.style.borderLeft = `4px solid ${categoryData?.color || '#6c757d'}`;
+        } else {
+            this.style.borderLeft = '';
+        }
+        
+        // Limpar subcategorias
+        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
+        subcategorySelect.style.borderLeft = '';
+        
+        if (selectedCategory) {
+            // Filtrar subcategorias para a categoria selecionada E o tipo de transação
+            const subcategories = filteredCategories.filter(cat => cat.name === selectedCategory);
+            
+            subcategories.forEach(subcategory => {
+                const option = document.createElement('option');
+                option.value = subcategory.subcategory;
+                option.textContent = subcategory.subcategory;
+                option.style.borderLeft = `4px solid ${subcategory.color || '#6c757d'}`;
+                option.style.paddingLeft = '12px';
+                subcategorySelect.appendChild(option);
+            });
+        }
+    });
+    
+    // Event listener para mudança de subcategoria
+    document.getElementById('edit_user_subcategory').addEventListener('change', function() {
+        const selectedSubcategory = this.value;
+        
+        if (selectedSubcategory) {
+            const subcategoryData = userCategories.find(cat => cat.subcategory === selectedSubcategory);
+            this.style.borderLeft = `4px solid ${subcategoryData?.color || '#6c757d'}`;
+        } else {
+            this.style.borderLeft = '';
+        }
+    });
+    
+    // Event listener para mudança de tipo de transação no modal
+    document.getElementById('edit_type').addEventListener('change', function() {
+        const transactionType = this.value;
+        
+        // Recarregar categorias baseadas no novo tipo
+        populateCategorySelect(transactionType);
+        
+        // Limpar seleções atuais
+        const categorySelect = document.getElementById('edit_user_category');
+        const subcategorySelect = document.getElementById('edit_user_subcategory');
+        
+        categorySelect.value = '';
+        categorySelect.style.borderLeft = '';
+        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
+        subcategorySelect.style.borderLeft = '';
+    });
+    
+    // Funções para edição inline de categorias na tabela
+    function initializeInlineEditing() {
+        loadUserCategoriesForTable();
+        setupInlineEventListeners();
+    }
+    
+    async function loadUserCategoriesForTable() {
+        try {
+            const response = await fetch('/api/categories');
+            const data = await response.json();
+            
+            if (data.success) {
+                userCategories = data.categories;
+                populateTableDropdowns();
+                // Colorir badges nas linhas verificadas de acordo com a cor da categoria/subcategoria
+                colorVerifiedBadges();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar categorias para tabela:', error);
+        }
+    }
+    
+    function populateTableDropdowns() {
+        // Popula dropdowns de categoria
+        const categoryDropdowns = document.querySelectorAll('.category-dropdown');
+        categoryDropdowns.forEach(dropdown => {
+            const transactionId = dropdown.dataset.transactionId;
+            const currentValue = dropdown.dataset.currentValue || '';
+            
+            // Encontrar o tipo de transação para esta linha
+            const row = dropdown.closest('tr');
+            const transactionType = detectTransactionType(row);
+            console.log(`Transação ${transactionId}: Tipo detectado = ${transactionType}`); // Debug
+            
+            // Limpar opções existentes
+            dropdown.innerHTML = '<option value=""></option>';
+            
+            // Filtrar categorias pelo tipo de transação
+            const filteredCategories = userCategories.filter(cat => cat.transaction_type === transactionType);
+            const uniqueCategories = [...new Set(filteredCategories.map(cat => cat.name))];
+            
+            uniqueCategories.forEach(categoryName => {
+                const categoryData = filteredCategories.find(cat => cat.name === categoryName);
+                const option = document.createElement('option');
+                option.value = categoryName;
+                option.textContent = categoryName;
+                // Aplicar cor sutil como borda esquerda
+                option.style.borderLeft = `4px solid ${categoryData.color || '#6c757d'}`;
+                if (categoryName === currentValue) {
+                    option.selected = true;
+                }
+                dropdown.appendChild(option);
+            });
+            
+            // Atualizar estilo visual baseado no valor
+            updateDropdownVisualStyle(dropdown, currentValue);
+        });
+        
+        // Popula dropdowns de subcategoria
+        populateSubcategoryDropdowns();
+
+        // Reaplicar valores sugeridos temporários previamente marcados (data-ephemeral)
+        document.querySelectorAll('tr.suggested-temp').forEach(row => {
+            const txId = row.getAttribute('data-id');
+            const catSelect = row.querySelector('.category-dropdown');
+            const subSelect = row.querySelector('.subcategory-dropdown');
+            if (catSelect && catSelect.value) {
+                updateDropdownVisualStyle(catSelect, catSelect.value);
+                updateSubcategoryOptions(txId, catSelect.value);
+            }
+            if (subSelect && subSelect.value) {
+                updateDropdownVisualStyle(subSelect, subSelect.value);
+            }
+        });
+    }
+    
+    // Função auxiliar para atualizar estilo visual do dropdown
+    function updateDropdownVisualStyle(dropdown, value) {
+        if (value) {
+            const categoryData = userCategories.find(cat => 
+                cat.name === value || cat.subcategory === value
+            );
+            const color = categoryData?.color || '#6c757d';
+            
+            dropdown.setAttribute('data-has-value', 'true');
+            dropdown.style.setProperty('--category-color', color);
+            dropdown.style.borderLeft = `4px solid ${color}`;
+            dropdown.style.backgroundColor = `${color}15`; // 15 = 8.5% opacity
+            dropdown.style.fontWeight = '600';
+        } else {
+            dropdown.removeAttribute('data-has-value');
+            dropdown.style.removeProperty('--category-color');
+            dropdown.style.borderLeft = '';
+            dropdown.style.backgroundColor = '';
+            dropdown.style.fontWeight = '';
+        }
+    }
+    
+    // Função auxiliar para detectar tipo de transação
+    function detectTransactionType(row) {
+        const amountElement = row.querySelector('.modern-transaction-amount');
+        
+        if (amountElement) {
+            // Verificar pelas classes CSS que indicam o tipo
+            if (amountElement.classList.contains('modern-amount-positive')) {
+                return 'CREDIT';
+            } else if (amountElement.classList.contains('modern-amount-negative')) {
+                return 'DEBIT';
+            } else {
+                // Fallback: verificar pelo texto
+                const amountText = amountElement.textContent.trim();
+                return amountText.startsWith('+') ? 'CREDIT' : 'DEBIT';
+            }
+        }
+        
+        return 'CREDIT'; // padrão
+    }
+
+    function populateSubcategoryDropdowns() {
+        const subcategoryDropdowns = document.querySelectorAll('.subcategory-dropdown');
+        subcategoryDropdowns.forEach(dropdown => {
+            const transactionId = dropdown.dataset.transactionId;
+            const currentValue = dropdown.dataset.currentValue || dropdown.value || '';
+            
+            // Encontrar a categoria selecionada para esta transação
+            const categoryDropdown = document.querySelector(`.category-dropdown[data-transaction-id="${transactionId}"]`);
+            const selectedCategory = categoryDropdown ? categoryDropdown.value : '';
+            
+            // Encontrar o tipo de transação para esta linha
+            const row = dropdown.closest('tr');
+            const transactionType = detectTransactionType(row);
+            
+            // Guardar se há valor atual para tentar preservar
+            const preserve = currentValue;
+            dropdown.innerHTML = '<option value=""></option>';
+            
+            // Resetar estilo quando categoria muda
+            updateDropdownVisualStyle(subcategoryDropdown, '');
+            
+            if (selectedCategory) {
+                // Filtrar subcategorias para a categoria selecionada E o tipo de transação
+                const subcategories = userCategories.filter(cat => 
+                    cat.name === selectedCategory && cat.transaction_type === transactionType
+                );
+                
+                subcategories.forEach(subcategory => {
+                    const option = document.createElement('option');
+                    option.value = subcategory.subcategory;
+                    option.textContent = subcategory.subcategory;
+                    option.style.borderLeft = `4px solid ${subcategory.color || '#6c757d'}`;
+                    subcategoryDropdown.appendChild(option);
+                });
+            }
+        });
+    }
+    
+    function setupInlineEventListeners() {
+        // Event listeners para mudança de categoria
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('category-dropdown')) {
+                const transactionId = e.target.dataset.transactionId;
+                const isVerified = e.target.dataset.verified === '1';
+                
+                // Impedir alteração se verificado
+                if (isVerified) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const newCategory = e.target.value;
+                
+                // Aplicar estilo visual baseado na seleção
+                updateDropdownVisualStyle(e.target, newCategory);
+                
+                // Atualizar subcategorias disponíveis
+                updateSubcategoryOptions(transactionId, newCategory);
+                
+                // Salvar somente se não for alteração ephemeral automática
+                if(!e.target.hasAttribute('data-ephemeral')) {
+                    saveInlineCategory(transactionId, 'user_category', newCategory);
+                } else {
+                    // Remover flag para próximas alterações manuais persistirem
+                    setTimeout(()=> e.target.removeAttribute('data-ephemeral'), 0);
+                }
+            }
+            
+            if (e.target.classList.contains('subcategory-dropdown')) {
+                const transactionId = e.target.dataset.transactionId;
+                const isVerified = e.target.dataset.verified === '1';
+                
+                // Impedir alteração se verificado
+                if (isVerified) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const newSubcategory = e.target.value;
+                
+                // Aplicar estilo visual baseado na seleção
+                updateDropdownVisualStyle(e.target, newSubcategory);
+                
+                if(!e.target.hasAttribute('data-ephemeral')) {
+                    saveInlineCategory(transactionId, 'user_subcategory', newSubcategory);
+                } else {
+                    setTimeout(()=> e.target.removeAttribute('data-ephemeral'), 0);
+                }
+            }
+        });
+    }
+    
+    function updateSubcategoryOptions(transactionId, selectedCategory) {
+        const subcategoryDropdown = document.querySelector(`.subcategory-dropdown[data-transaction-id="${transactionId}"]`);
+        if (!subcategoryDropdown) return;
+        
+        // Encontrar o tipo de transação para esta linha
+        const row = subcategoryDropdown.closest('tr');
+        const transactionType = detectTransactionType(row);
+        
+        // Limpar subcategorias
+        subcategoryDropdown.innerHTML = '<option value=""></option>';
+        
+        // Resetar estilo quando categoria muda
+        updateDropdownVisualStyle(subcategoryDropdown, '');
+        
+        if (selectedCategory) {
+            // Filtrar subcategorias para a categoria selecionada E o tipo de transação
+            const subcategories = userCategories.filter(cat => 
+                cat.name === selectedCategory && cat.transaction_type === transactionType
+            );
+            
+                subcategories.forEach(subcategory => {
+                    const option = document.createElement('option');
+                    option.value = subcategory.subcategory;
+                    option.textContent = subcategory.subcategory;
+                    option.style.borderLeft = `4px solid ${subcategory.color || '#6c757d'}`;
+                    if (subcategory.subcategory === preserve) option.selected = true;
+                    subcategoryDropdown.appendChild(option);
+                });
+                if(preserve){
+                    dropdown.value = preserve;
+                    updateDropdownVisualStyle(dropdown, preserve);
+                }
+        }
+    }
+    
+    async function saveInlineCategory(transactionId, field, value) {
+        try {
+            const formData = new FormData();
+            formData.append(field, value);
+            
+            const response = await fetch(`/transactions/${transactionId}/update-category`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                console.error('Erro ao salvar categoria:', data.message);
+                // Opcional: mostrar notificação de erro
+            }
+        } catch (error) {
+            console.error('Erro ao salvar categoria:', error);
+        }
+    }
+    
+    // Inicializar edição inline quando a página carregar
+    initializeInlineEditing();
+    
+    // Inicializar estado dos dropdowns baseado no status verificado
+    initializeDropdownStates();
+
+    // Função para aplicar cor nas badges de Categoria/Subcategoria em linhas verificadas
+    function colorVerifiedBadges() {
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const verified = row.querySelector('.verification-checkbox')?.checked;
+            if (!verified) return;
+            // Categoria
+            const catBadge = row.querySelector('td:nth-child(5) .modern-badge');
+            const catText = catBadge ? catBadge.textContent.trim() : '';
+            if (catBadge && catText) {
+                const catData = userCategories.find(c => c.name === catText);
+                if (catData?.color) {
+                    catBadge.style.borderLeft = `6px solid ${catData.color}`;
+                    catBadge.style.backgroundColor = `${catData.color}15`;
+                    catBadge.style.color = '#111827';
+                    catBadge.style.fontWeight = '600';
+                }
+            }
+            // Subcategoria
+            const subBadge = row.querySelector('td:nth-child(6) .modern-badge');
+            const subText = subBadge ? subBadge.textContent.trim() : '';
+            if (subBadge && subText) {
+                const subData = userCategories.find(c => c.subcategory === subText);
+                if (subData?.color) {
+                    subBadge.style.borderLeft = `6px solid ${subData.color}`;
+                    subBadge.style.backgroundColor = `${subData.color}15`;
+                    subBadge.style.color = '#111827';
+                    subBadge.style.fontWeight = '600';
+                }
+            }
+        });
+    }
+    
+    // Gerenciamento dos filtros de categoria e subcategoria
+    function initializeFilterCategoryRelation() {
+        const categoryFilter = document.getElementById('user_category');
+        const subcategoryFilter = document.getElementById('user_subcategory');
+        
+        if (categoryFilter && subcategoryFilter) {
+            categoryFilter.addEventListener('change', function() {
+                const selectedCategory = this.value;
+                
+                // Buscar subcategorias para a categoria selecionada
+                fetch('/api/categories')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Limpar subcategorias
+                            subcategoryFilter.innerHTML = '<option value="">Todas</option>';
+                            
+                            if (selectedCategory) {
+                                // Filtrar subcategorias para a categoria selecionada
+                                const subcategories = data.categories.filter(cat => cat.name === selectedCategory);
+                                
+                                subcategories.forEach(subcategory => {
+                                    if (subcategory.subcategory) {
+                                        const option = document.createElement('option');
+                                        option.value = subcategory.subcategory;
+                                        option.textContent = subcategory.subcategory;
+                                        subcategoryFilter.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar subcategorias:', error);
+                    });
+            });
+        }
+    }
+    
+    // Inicializar relação entre filtros
+    initializeFilterCategoryRelation();
+    
+    function initializeDropdownStates() {
+        // Verificar todos os dropdowns e aplicar estado baseado no verificado
+        document.querySelectorAll('.category-dropdown, .subcategory-dropdown').forEach(dropdown => {
+            const transactionId = dropdown.dataset.transactionId;
+            const isVerified = dropdown.dataset.verified === '1';
+            const currentValue = dropdown.dataset.currentValue || dropdown.value;
+            
+            if (isVerified) {
+                dropdown.disabled = true;
+                dropdown.style.cursor = 'not-allowed';
+                dropdown.style.opacity = '0.7';
+                dropdown.style.border = '2px solid #007bff';
+                
+                // Manter cor da categoria mas indicar bloqueio
+                if (currentValue) {
+                    const categoryData = userCategories.find(cat => 
+                        cat.name === currentValue || cat.subcategory === currentValue
+                    );
+                    const color = categoryData?.color || '#6c757d';
+                    dropdown.style.borderLeft = `4px solid ${color}`;
+                    dropdown.style.backgroundColor = `${color}15`;
+                }
+            } else {
+                // Aplicar estilo normal
+                updateDropdownVisualStyle(dropdown, currentValue);
+            }
+        });
+    }
+    
+    // Função para toggle dos filtros avançados
+    function toggleAdvancedFilters() {
+        const advancedFilters = document.getElementById('advanced-filters');
+        const toggleIcon = document.getElementById('advanced-toggle-icon');
+        
+        if (advancedFilters.style.display === 'none' || !advancedFilters.style.display) {
+            advancedFilters.style.display = 'block';
+            toggleIcon.className = 'fas fa-chevron-up';
+        } else {
+            advancedFilters.style.display = 'none';
+            toggleIcon.className = 'fas fa-chevron-down';
+        }
+    }
+    
+    // Adicionar função global para uso no onclick
+    window.toggleAdvancedFilters = toggleAdvancedFilters;
+    
+    // Inicializar dropdowns de seleção múltipla
+    function initializeMultiSelectDropdowns() {
+        document.querySelectorAll('.multi-select-container').forEach(container => {
+            const display = container.querySelector('.multi-select-display');
+            const options = container.querySelector('.multi-select-options');
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]:not([data-action])');
+            const selectAllCheckbox = container.querySelector('input[type="checkbox"][id$="_select_all"]');
+            const placeholder = display.getAttribute('data-placeholder');
+            
+            // Função para atualizar o texto do display
+            function updateDisplay() {
+                const selected = Array.from(checkboxes).filter(cb => cb.checked);
+                const displayText = display.querySelector('span');
+                
+                if (selected.length === 0) {
+                    displayText.textContent = placeholder;
+                    displayText.className = 'multi-select-placeholder';
+                } else if (selected.length === 1) {
+                    displayText.textContent = selected[0].nextElementSibling.textContent;
+                    displayText.className = '';
+                } else {
+                    displayText.innerHTML = `${selected.length} selecionados <span class="multi-select-count">${selected.length}</span>`;
+                    displayText.className = '';
+                }
+            }
+            
+            // Função para atualizar estado do "Selecionar todas"
+            function updateSelectAllState() {
+                if (selectAllCheckbox) {
+                    const totalCheckboxes = checkboxes.length;
+                    const selectedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked).length;
+                    
+                    if (selectedCheckboxes === 0) {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = false;
+                    } else if (selectedCheckboxes === totalCheckboxes) {
+                        selectAllCheckbox.checked = true;
+                        selectAllCheckbox.indeterminate = false;
+                    } else {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = true;
+                    }
+                }
+            }
+            
+            // Toggle dropdown
+            display.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Fechar outros dropdowns
+                document.querySelectorAll('.multi-select-options.show').forEach(opt => {
+                    if (opt !== options) {
+                        opt.classList.remove('show');
+                        opt.parentElement.querySelector('.multi-select-display').classList.remove('open');
+                    }
+                });
+                
+                // Toggle atual
+                options.classList.toggle('show');
+                display.classList.toggle('open');
+            });
+            
+            // Gerenciar "Selecionar todas"
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    const isChecked = e.target.checked;
+                    
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = isChecked;
+                    });
+                    
+                    updateDisplay();
+                    updateSelectAllState();
+                });
+                
+                selectAllCheckbox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
+            
+            // Gerenciar seleções individuais
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    updateDisplay();
+                    updateSelectAllState();
+                });
+                
+                // Evitar que clique no checkbox feche o dropdown
+                checkbox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            });
+            
+            // Evitar que clique nas opções feche o dropdown
+            options.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            
+            // Inicializar display e estado do "Selecionar todas"
+            updateDisplay();
+            updateSelectAllState();
+        });
+        
+        // Fechar dropdowns ao clicar fora
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.multi-select-options.show').forEach(options => {
+                options.classList.remove('show');
+                options.parentElement.querySelector('.multi-select-display').classList.remove('open');
+            });
+        });
+    }
+    
+    // Inicializar após carregamento
+    initializeMultiSelectDropdowns();
+    
+    // Função para sugerir categorias automaticamente (exposta globalmente)
+    window.suggestCategories = function(){
+        const btn = document.getElementById('suggestCategoriesBtn');
+        if(!btn) return;
+        if(btn.dataset.loading === '1') return; // evita duplo clique
+        btn.dataset.loading = '1';
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        btn.disabled = true;
+        fetch('/api/transactions/suggest_categories', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(r=>r.json())
+            .then(data=>{
+                if(!data.success){
+                    showTopMessage('Erro ao sugerir categorias: ' + (data.error || 'desconhecido'), 'danger');
+                    return;
+                }
+                const stats = data.stats || {};
+                const suggestions = data.suggestions || [];
+                let applied = 0;
+                console.log('Iniciando aplicação de sugestões. Total:', suggestions.length);
+                for (const sg of suggestions) {
+                    try {
+                        const catSelect = document.querySelector(`.category-dropdown[data-transaction-id="${sg.id}"]`);
+                        if(!catSelect) { continue; }
+                        const row = catSelect.closest('tr');
+                        if(!row) { continue; }
+                        const verified = row.querySelector('.verification-checkbox');
+                        if(verified && verified.checked) { continue; }
+                        const subSelect = row.querySelector('.subcategory-dropdown');
+
+                        if(sg.suggested_category){
+                            if(![...catSelect.options].some(o=>o.value===sg.suggested_category)){
+                                const opt = document.createElement('option');
+                                opt.value = sg.suggested_category;
+                                opt.textContent = sg.suggested_category;
+                                catSelect.appendChild(opt);
+                            }
+                            catSelect.value = sg.suggested_category;
+                            catSelect.dataset.currentValue = sg.suggested_category;
+                            catSelect.setAttribute('data-ephemeral','1');
+                            updateDropdownVisualStyle(catSelect, sg.suggested_category);
+                            updateSubcategoryOptions(sg.id, sg.suggested_category);
+                        }
+
+                        if(subSelect && sg.suggested_subcategory){
+                            if(![...subSelect.options].some(o=>o.value===sg.suggested_subcategory)){
+                                const opt2 = document.createElement('option');
+                                opt2.value = sg.suggested_subcategory;
+                                opt2.textContent = sg.suggested_subcategory;
+                                subSelect.appendChild(opt2);
+                            }
+                            subSelect.value = sg.suggested_subcategory;
+                            subSelect.dataset.currentValue = sg.suggested_subcategory;
+                            subSelect.setAttribute('data-ephemeral','1');
+                            updateDropdownVisualStyle(subSelect, sg.suggested_subcategory);
+                        }
+
+                        row.classList.add('suggested-temp');
+                        applied++;
+                    } catch(loopErr) {
+                        console.error('Erro ao aplicar sugestão para ID', sg.id, loopErr);
+                        continue;
+                    }
+                }
+                console.log('Sugestões aplicadas:', applied);
+                const msg = `Sugestão concluída. Candidatos: ${stats.total_candidates} | Por descrição: ${stats.by_description} | Mapping: ${stats.by_mapping} | Sugeridas: ${stats.suggested} | Sem correspondência: ${stats.no_match}`;
+                showTopMessage(msg, 'info');
+            })
+            .catch(err=>{ console.error(err); alert('Falha na requisição de sugestão.'); })
+            .finally(()=>{
+                btn.dataset.loading = '0';
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            });
+    }
+
+    // Helper para mostrar mensagem no topo (similar a flash)
+    function showTopMessage(text, level){
+        let container = document.getElementById('dynamic-alert-container');
+        if(!container){
+            container = document.createElement('div');
+            container.id = 'dynamic-alert-container';
+            container.style.marginTop = '10px';
+            const main = document.querySelector('main') || document.body;
+            main.prepend(container);
+        }
+        const div = document.createElement('div');
+        const cls = level === 'danger' ? 'alert-danger' : (level === 'warning' ? 'alert-warning' : 'alert-info');
+        div.className = 'alert ' + cls;
+        div.textContent = text;
+        container.innerHTML = '';
+        container.appendChild(div);
+        setTimeout(()=>{ if(div.parentNode) div.parentNode.removeChild(div); }, 12000);
+    }
+
+}); // <-- fecha o document.addEventListener('DOMContentLoaded', ... )
+
+</script>
+{% endblock %}

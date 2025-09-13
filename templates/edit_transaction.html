@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Transação - Finance App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border border-2 border-light shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editar Transação
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Valor -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label">Valor (R$)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="amount" 
+                                               name="amount" 
+                                               placeholder="0,00"
+                                               value="{{ transaction.amount|number_br if transaction.amount else '0,00' }}" 
+                                               required>
+                                    </div>
+                                    <div class="form-text">Use valores negativos para saídas e positivos para entradas</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Data da Transação -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="transaction_date" class="form-label">Data da Transação</label>
+                                    <input type="datetime-local" 
+                                           class="form-control" 
+                                           id="transaction_date" 
+                                           name="transaction_date" 
+                                           value="{{ transaction.transaction_date[:16] if transaction.transaction_date else '' }}" 
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descrição</label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3" 
+                                      required>{{ transaction.description if transaction.description else '' }}</textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Categoria -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Categoria</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">Selecione uma categoria</option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat }}" {% if transaction.category == cat %}selected{% endif %}>
+                                            {{ cat }}
+                                        </option>
+                                        {% endfor %}
+                                        <option value="nova_categoria" data-toggle="custom">Nova categoria...</option>
+                                    </select>
+                                    <input type="text" 
+                                           class="form-control mt-2 d-none" 
+                                           id="new_category" 
+                                           placeholder="Digite a nova categoria">
+                                </div>
+                            </div>
+                            
+                            <!-- Conta -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="account_id" class="form-label">Conta</label>
+                                    <select class="form-select" id="account_id" name="account_id">
+                                        <option value="">Manter conta atual</option>
+                                        {% for account in accounts %}
+                                        <option value="{{ account.id }}" {% if transaction.account_id == account.id %}selected{% endif %}>
+                                            {{ account.name }} ({{ account.type }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Deixe em branco para manter a conta atual: {{ transaction.account_name }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Informações da Transação -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Informações da Transação</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <strong>ID:</strong> {{ transaction.id }}<br>
+                                            <strong>Conta Atual:</strong> {{ transaction.account_name }}<br>
+                                            <strong>Conexão:</strong> {{ transaction.connection_name }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <strong>Criada em:</strong> {{ transaction.creation_date[:19] if transaction.creation_date else 'N/A' }}<br>
+                                            <strong>Modificada em:</strong> {{ transaction.modification_date[:19] if transaction.modification_date else 'N/A' }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botões de Ação -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('transactions') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-outline-warning me-2">
+                                    <i class="fas fa-undo me-1"></i>Restaurar
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para converter valor brasileiro para número
+function parseCurrencyBR(value) {
+    if (!value) return 0;
+    
+    // Remove tudo exceto números, vírgula e sinal de menos
+    let cleanValue = value.replace(/[^-\d,]/g, '');
+    
+    // Substitui vírgula por ponto
+    cleanValue = cleanValue.replace(',', '.');
+    
+    return parseFloat(cleanValue) || 0;
+}
+
+// Aplica máscara no campo de valor
+const amountInput = document.getElementById('amount');
+if (amountInput) {
+    amountInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        
+        // Preserva o sinal de menos se existir
+        const isNegative = value.startsWith('-');
+        
+        // Remove tudo exceto números e vírgula
+        value = value.replace(/[^\d,]/g, '');
+        
+        // Se há mais de uma vírgula, mantém apenas a primeira
+        let commaIndex = value.indexOf(',');
+        if (commaIndex !== -1) {
+            value = value.substring(0, commaIndex + 1) + value.substring(commaIndex + 1).replace(/,/g, '');
+        }
+        
+        // Limita a parte decimal a 2 dígitos
+        if (value.includes(',')) {
+            let parts = value.split(',');
+            if (parts[1] && parts[1].length > 2) {
+                parts[1] = parts[1].substring(0, 2);
+                value = parts[0] + ',' + parts[1];
+            }
+        }
+        
+        // Formata com pontos nos milhares
+        if (value.includes(',')) {
+            let parts = value.split(',');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            value = parts.join(',');
+        } else {
+            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+        
+        // Adiciona o sinal de menos de volta se necessário
+        if (isNegative && value) {
+            value = '-' + value;
+        }
+        
+        e.target.value = value;
+    });
+    
+    // Garante formato correto ao sair do campo
+    amountInput.addEventListener('blur', function(e) {
+        let value = e.target.value;
+        if (value && !value.includes(',')) {
+            // Se é apenas sinal de menos, zera
+            if (value === '-') {
+                e.target.value = '0,00';
+            } else {
+                e.target.value = value + ',00';
+            }
+        }
+    });
+}
+
+// Lógica para categoria personalizada
+document.getElementById('category').addEventListener('change', function() {
+    const newCategoryInput = document.getElementById('new_category');
+    const categorySelect = this;
+    
+    if (this.value === 'nova_categoria') {
+        newCategoryInput.classList.remove('d-none');
+        newCategoryInput.required = true;
+        newCategoryInput.focus();
+    } else {
+        newCategoryInput.classList.add('d-none');
+        newCategoryInput.required = false;
+        newCategoryInput.value = '';
+    }
+});
+
+// Quando a nova categoria é digitada, atualiza o valor do select
+document.getElementById('new_category').addEventListener('input', function() {
+    const categorySelect = document.getElementById('category');
+    categorySelect.value = this.value;
+});
+
+// Previne submit se nova categoria estiver vazia
+document.querySelector('form').addEventListener('submit', function(e) {
+    const categorySelect = document.getElementById('category');
+    const newCategoryInput = document.getElementById('new_category');
+    const amountInput = document.getElementById('amount');
+    
+    // Converte valor brasileiro para formato americano antes do envio
+    if (amountInput.value) {
+        const numericValue = parseCurrencyBR(amountInput.value);
+        amountInput.value = numericValue.toString();
+    }
+    
+    if (categorySelect.value === 'nova_categoria' && !newCategoryInput.value.trim()) {
+        e.preventDefault();
+        alert('Por favor, digite o nome da nova categoria');
+        newCategoryInput.focus();
+    } else if (categorySelect.value === 'nova_categoria') {
+        // Atualiza o valor para a nova categoria
+        categorySelect.value = newCategoryInput.value.trim();
+    }
+});
+</script>
+{% endblock %}

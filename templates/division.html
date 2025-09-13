@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Divisão - Finance App{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-6">
+  <div>
+    <h1 class="display-6 font-weight-bold mb-2" style="color: var(--gray-800);">
+      <i class="fas fa-percent text-primary me-3"></i>
+      Divisão por Conta
+    </h1>
+    <p class="text-muted">Defina como cada transação será dividida entre os dois usuários</p>
+  </div>
+  <div class="d-flex gap-3">
+    <button id="saveAllBtn" class="modern-btn modern-btn-success">
+      <i class="fas fa-save"></i>
+      Salvar Tudo
+    </button>
+  </div>
+</div>
+
+<div class="modern-card mb-6">
+  <div class="modern-card-header">
+    <h5 class="modern-card-title mb-0"><i class="fas fa-user-friends text-primary me-2"></i> Identificação dos Usuários</h5>
+  </div>
+  <div class="modern-card-body">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <label class="form-label">Nome do Usuário 1</label>
+        <input id="user1_name" type="text" class="form-control" value="{{ user_names.user1_name }}" placeholder="Usuário 1">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Nome do Usuário 2</label>
+        <input id="user2_name" type="text" class="form-control" value="{{ user_names.user2_name }}" placeholder="Usuário 2">
+      </div>
+    </div>
+    <div class="mt-3">
+      <button id="saveNamesBtn" class="modern-btn modern-btn-outline">
+        <i class="fas fa-check"></i>
+        Salvar Nomes
+      </button>
+      <span id="namesStatus" class="text-muted ms-3"></span>
+    </div>
+  </div>
+</div>
+
+<div class="modern-card">
+  <div class="modern-card-header d-flex justify-content-between align-items-center">
+    <h5 class="modern-card-title mb-0"><i class="fas fa-university text-primary me-2"></i> Percentual por Conta</h5>
+  </div>
+  <div class="modern-card-body">
+    {% if accounts %}
+    <div class="modern-table-container">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Conta</th>
+            <th>Tipo</th>
+            <th class="text-center" style="min-width: 160px;">% <span class="user1-label">{{ user_names.user1_name }}</span></th>
+            <th class="text-center" style="min-width: 160px;">% <span class="user2_label">{{ user_names.user2_name }}</span></th>
+            <th class="text-right">Saldo</th>
+            <th class="text-center" style="min-width: 120px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for acc in accounts %}
+          <tr data-account-id="{{ acc.id }}">
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <i class="fas fa-university text-primary"></i>
+                <div class="font-weight-medium">{{ acc.name }}</div>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-secondary">{{ acc.type or 'N/A' }}</span>
+              {% if acc.subtype %}<span class="badge bg-light text-dark ms-2">{{ acc.subtype }}</span>{% endif %}
+            </td>
+            <td class="text-center">
+              <input type="number" class="form-control form-control-sm percent-input user1" min="0" max="100" step="0.01" value="{{ '%.2f'|format(acc.user1_percent) }}">
+            </td>
+            <td class="text-center">
+              <input type="number" class="form-control form-control-sm percent-input user2" min="0" max="100" step="0.01" value="{{ '%.2f'|format(acc.user2_percent) }}" readonly>
+            </td>
+            <td class="text-right">
+              {{ acc.balance|currency_br }}
+            </td>
+            <td class="text-center">
+              <button class="modern-btn modern-btn-sm modern-btn-primary save-row"><i class="fas fa-save"></i> Salvar</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">Nenhuma conta encontrada.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  function formatBR(x){
+    return new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}).format(x);
+  }
+  function clamp01(p){
+    p = isNaN(p)?0:Math.max(0, Math.min(100, p));
+    return p;
+  }
+  function complement(p){
+    return +(100 - p).toFixed(2);
+  }
+
+  function updateRowComplements(row){
+    const p1Input = row.querySelector('input.percent-input.user1');
+    const p2Input = row.querySelector('input.percent-input.user2');
+    const p1 = clamp01(parseFloat(p1Input.value));
+    const p2 = complement(p1);
+  p1Input.value = p1.toFixed(2);
+  p2Input.value = p2.toFixed(2);
+  }
+
+  function parseBRPercent(value){
+  if(typeof value !== 'string') return parseFloat(value) || 0;
+  // Aceita tanto vírgula quanto ponto como separador decimal
+  const v = value.replace(',', '.');
+  return parseFloat(v) || 0;
+  }
+
+  function saveRow(row){
+    const accountId = row.getAttribute('data-account-id');
+    const p1Input = row.querySelector('input.percent-input.user1');
+    let p1 = parseBRPercent(p1Input.value);
+    p1 = clamp01(p1);
+    const p2 = complement(p1);
+
+    fetch('/api/division/split', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ account_id: accountId, user1_percent: p1, user2_percent: p2 })
+    }).then(r=>r.json()).then(data=>{
+      if(window.modernFinanceApp){
+        window.modernFinanceApp.showNotification(data.success? 'Divisão salva' : 'Erro ao salvar divisão', data.success? 'success' : 'error');
+      }
+    }).catch(err=>{
+      if(window.modernFinanceApp){ window.modernFinanceApp.showNotification('Erro: '+err,'error'); }
+    });
+  }
+
+  function saveAll(){
+    document.querySelectorAll('tbody tr[data-account-id]').forEach(row=> saveRow(row));
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // Auto-complemento
+    document.querySelectorAll('tbody tr[data-account-id]').forEach(row=>{
+      const p1 = row.querySelector('input.percent-input.user1');
+      p1.addEventListener('input', ()=> updateRowComplements(row));
+      // inicializa o complemento corretamente
+      updateRowComplements(row);
+      const saveBtn = row.querySelector('button.save-row');
+      saveBtn.addEventListener('click', ()=> saveRow(row));
+    });
+
+    // Salvar nomes
+    const saveNamesBtn = document.getElementById('saveNamesBtn');
+    const status = document.getElementById('namesStatus');
+    saveNamesBtn.addEventListener('click', function(){
+      const user1 = document.getElementById('user1_name').value.trim() || 'Usuário 1';
+      const user2 = document.getElementById('user2_name').value.trim() || 'Usuário 2';
+      fetch('/api/division/names', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ user1_name: user1, user2_name: user2 })
+      }).then(r=>r.json()).then(data=>{
+        if(data.success){
+          status.textContent = 'Salvo com sucesso';
+          // Atualiza labels das colunas
+          document.querySelectorAll('.user1-label').forEach(el=> el.textContent = user1);
+          document.querySelectorAll('.user2_label').forEach(el=> el.textContent = user2);
+          if(window.modernFinanceApp){ window.modernFinanceApp.showNotification('Nomes salvos','success'); }
+        } else {
+          status.textContent = 'Falha ao salvar';
+          if(window.modernFinanceApp){ window.modernFinanceApp.showNotification('Erro ao salvar nomes','error'); }
+        }
+        setTimeout(()=> status.textContent = '', 2500);
+      }).catch(err=>{
+        status.textContent = 'Erro: '+err;
+      });
+    });
+
+    document.getElementById('saveAllBtn').addEventListener('click', saveAll);
+  });
+})();
+</script>
+{% endblock %}

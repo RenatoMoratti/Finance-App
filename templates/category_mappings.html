@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% block title %}De-Para de Categorias{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="fas fa-random text-primary"></i> De-Para de Categorias (API → Usuário)</h2>
+  <div class="d-flex align-items-center">
+    <label for="typeFilter" class="me-2 small text-muted">Tipo:</label>
+    <select id="typeFilter" class="form-select form-select-sm w-auto me-3" onchange="applyFilters()">
+      <option value="">Todos</option>
+      <option value="CREDIT">CREDIT</option>
+      <option value="DEBIT">DEBIT</option>
+    </select>
+    <button class="modern-btn modern-btn-outline me-3" onclick="reconcileMappings()"><i class="fas fa-rotate"></i> Reconciliar</button>
+    <div class="form-check form-switch m-0">
+      <input class="form-check-input" type="checkbox" id="onlyPendingToggle" onchange="applyFilters()">
+      <label class="form-check-label small" for="onlyPendingToggle">Somente pendentes</label>
+    </div>
+  </div>
+</div>
+{% if new_count and new_count > 0 %}
+<div class="alert alert-info"><i class="fas fa-lightbulb"></i> {{ new_count }} novas categorias foram detectadas na última sincronização e precisam de classificação.</div>
+{% endif %}
+<div class="modern-card">
+  <div class="modern-card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="fas fa-list"></i> Mapeamentos</h5>
+    <span class="modern-badge modern-badge-warning" id="pendingCounter"></span>
+  </div>
+  <div class="modern-card-body">
+    <div class="table-responsive">
+      <table class="modern-table" id="mappingsTable">
+        <thead>
+          <tr>
+            <th>Categoria API</th>
+            <th>Tipo</th>
+            <th>Categoria Usuário</th>
+            <th>Subcategoria</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in mappings %}
+          <tr data-source="{{ m.source_category }}" data-type="{{ m.transaction_type }}" data-needs="{{ 1 if m.needs_classification else 0 }}" class="mapping-row {% if m.transaction_type=='CREDIT' %}credit-type{% elif m.transaction_type=='DEBIT' %}debit-type{% endif %}">
+            <td>{{ m.source_category }}</td>
+            <td><span class="modern-badge {% if m.transaction_type=='CREDIT' %}credit-badge{% elif m.transaction_type=='DEBIT' %}debit-badge{% else %}modern-badge-secondary{% endif %}">{{ m.transaction_type or 'N/A' }}</span></td>
+            <td>
+              <select class="form-select form-select-sm user-category-select" onchange="onCategoryChange(this); autoSaveRow(this)">
+                <option value="">-- Selecione --</option>
+                {% for uc in user_categories %}
+                  {% if uc.transaction_type == m.transaction_type %}
+                    <option value="{{ uc.name }}" {% if uc.name == m.mapped_user_category %}selected{% endif %}>{{ uc.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm subcategory-input" value="{{ m.mapped_user_subcategory or '' }}" placeholder="Opcional" oninput="debouncedSubcategoryChange(this)" {% if not m.mapped_user_category %}disabled{% endif %}>
+            </td>
+            <td>
+              {% if m.needs_classification %}
+                <span class="modern-badge modern-badge-warning">Pendente</span>
+              {% else %}
+                <span class="modern-badge modern-badge-success">OK</span>
+              {% endif %}
+            </td>
+            <td><button class="modern-btn modern-btn-danger modern-btn-xs" onclick="deleteMapping(this)" title="Remover"><i class="fas fa-trash"></i></button></td>
+            
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+#mappingsTable td, #mappingsTable th { vertical-align: middle; }
+.user-category-select { min-width: 160px; }
+.subcategory-input { min-width: 140px; }
+/* Cores por tipo */
+.mapping-row.credit-type { background: linear-gradient(90deg,#e9fbf1 0%, #ffffff 75%); }
+.mapping-row.debit-type { background: linear-gradient(90deg,#fff1ed 0%, #ffffff 75%); }
+.modern-badge.credit-badge { background:#15803d; color:#fff; }
+.modern-badge.debit-badge { background:#dc2626; color:#fff; }
+</style>
+
+<script>
+function updatePendingBadge(pending){
+  const badge = document.getElementById('pendingCounter');
+  if(!badge) return;
+  if(pending>0){
+    badge.innerHTML = pending + ' pendentes';
+    badge.style.display='inline-block';
+  } else {
+    badge.innerHTML = '0 pendentes';
+  }
+}
+function reconcileMappings(){
+  fetch('/api/category_mappings/reconcile',{method:'POST'})
+    .then(r=>r.json())
+    .then(d=>{ if(d.success){ loadMappings(); } });
+}
+function loadMappings(){
+  fetch('/api/category_mappings')
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.success) return;
+      updatePendingBadge(d.pending||0);
+      const tbody = document.querySelector('#mappingsTable tbody');
+      tbody.innerHTML='';
+      d.mappings.forEach(m=>{
+        const tr=document.createElement('tr');
+        tr.dataset.source=m.source_category; tr.dataset.type=m.transaction_type; tr.dataset.needs = m.needs_classification ? '1':'0';
+        const typeClass = m.transaction_type==='CREDIT' ? 'credit-type' : (m.transaction_type==='DEBIT' ? 'debit-type' : '');
+        tr.className='mapping-row '+typeClass;
+        tr.innerHTML=`<td>${m.source_category}</td>
+          <td><span class=\"modern-badge ${m.transaction_type==='CREDIT'?'credit-badge':(m.transaction_type==='DEBIT'?'debit-badge':'modern-badge-secondary')}\">${m.transaction_type||'N/A'}</span></td>
+          <td>${buildCategorySelect(m)}</td>
+          <td><input type="text" class="form-control form-control-sm subcategory-input" value="${m.mapped_user_subcategory||''}" placeholder="Opcional" ${m.mapped_user_category? '' : 'disabled'}></td>
+          <td>${m.needs_classification?'<span class="modern-badge modern-badge-warning status-pill">Pendente</span>':'<span class="modern-badge modern-badge-success status-pill">OK</span>'}</td>`;
+          const actionTd = document.createElement('td');
+          actionTd.innerHTML = `<button class="modern-btn modern-btn-danger modern-btn-xs" onclick="deleteMapping(this)" title="Remover"><i class='fas fa-trash'></i></button>`;
+          tr.appendChild(actionTd);
+        tbody.appendChild(tr);
+      });
+      applyFilters();
+    });
+}
+function buildCategorySelect(m){
+  // Lista pré-renderizada de categorias por tipo injetada em JSON
+  if(!window.__userCategories){
+    window.__userCategories = JSON.parse(document.getElementById('ucData').textContent);
+  }
+  const opts = ["<option value=''>-- Selecione --</option>"];
+  window.__userCategories.filter(uc=>uc.transaction_type===m.transaction_type).forEach(uc=>{
+    const selected = (uc.name === m.mapped_user_category) ? 'selected' : '';
+    opts.push(`<option value='${uc.name}' ${selected}>${uc.name}</option>`);
+  });
+  return `<select class='form-select form-select-sm user-category-select' onchange='onCategoryChange(this); autoSaveRow(this)'>${opts.join('')}</select>`;
+}
+function onCategoryChange(sel){
+  const tr = sel.closest('tr');
+  const sub = tr.querySelector('.subcategory-input');
+  if(sel.value){ sub.disabled=false; } else { sub.disabled=true; sub.value=''; }
+}
+function saveMappingRow(tr){
+  if(!tr) return;
+  const source = tr.dataset.source;
+  const ttype = tr.dataset.type;
+  const catSel = tr.querySelector('.user-category-select');
+  const subInput = tr.querySelector('.subcategory-input');
+  const statusPill = tr.querySelector('.status-pill');
+  const cat = catSel ? catSel.value : '';
+  const sub = subInput ? subInput.value.trim() : '';
+  if(statusPill){ statusPill.className='modern-badge modern-badge-secondary status-pill'; statusPill.textContent='Salvando...'; }
+  fetch('/api/category_mappings/update',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({source_category:source, transaction_type:ttype, mapped_user_category:cat, mapped_user_subcategory:sub})
+  }).then(r=>r.json()).then(d=>{
+    if(statusPill){
+      if(d.success){
+        if(cat){
+          statusPill.className='modern-badge modern-badge-success status-pill';
+          statusPill.textContent='OK';
+        } else {
+          statusPill.className='modern-badge modern-badge-warning status-pill';
+          statusPill.textContent='Pendente';
+        }
+      } else {
+        statusPill.className='modern-badge modern-badge-danger status-pill';
+        statusPill.textContent='Erro';
+      }
+    }
+    if(d && typeof d.pending !== 'undefined') updatePendingBadge(d.pending);
+  // Atualiza atributo data-needs e aplica filtro se ativo
+  tr.dataset.needs = cat ? '0':'1';
+  applyFilters();
+  }).catch(()=>{
+    if(statusPill){ statusPill.className='modern-badge modern-badge-danger status-pill'; statusPill.textContent='Erro'; }
+  });
+}
+function autoSaveRow(el){
+  const tr = el.closest('tr');
+  saveMappingRow(tr);
+}
+let subcategoryTimer;
+function debouncedSubcategoryChange(input){
+  clearTimeout(subcategoryTimer);
+  subcategoryTimer = setTimeout(()=>{ autoSaveRow(input); }, 500);
+}
+window.addEventListener('DOMContentLoaded',()=>{ loadMappings(); });
+
+function applyFilters(){
+  const onlyPending = document.getElementById('onlyPendingToggle')?.checked;
+  const typeValue = document.getElementById('typeFilter')?.value;
+  document.querySelectorAll('#mappingsTable tbody tr').forEach(tr=>{
+    const isPending = tr.dataset.needs === '1';
+    const rowType = tr.dataset.type || '';
+    let visible = true;
+    if(onlyPending && !isPending) visible = false;
+    if(typeValue && rowType !== typeValue) visible = false;
+    tr.style.display = visible ? '' : 'none';
+  });
+}
+
+function deleteMapping(btn){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const source = tr.dataset.source;
+  const ttype = tr.dataset.type;
+  if(!confirm('Remover mapeamento para "'+source+'"? Ele poderá ser recriado em nova reconciliação se ainda existir em transações.')) return;
+  fetch('/api/category_mappings/delete', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({source_category: source, transaction_type: ttype})
+  }).then(r=>r.json()).then(d=>{
+    if(d.success){
+      tr.remove();
+      if(typeof d.pending !== 'undefined') updatePendingBadge(d.pending);
+    } else {
+      alert('Erro ao remover: '+(d.message||'Desconhecido'));
+    }
+  }).catch(()=>alert('Erro de comunicação ao remover.'));
+}
+</script>
+<script id="ucData" type="application/json">{{ user_categories|tojson }}</script>
+{% endblock %}

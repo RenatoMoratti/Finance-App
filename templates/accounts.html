@@ -1,0 +1,993 @@
+{% extends "base.html" %}
+
+{% block title %}Contas - Finance App{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-6">
+    <div>
+        <h1 class="display-6 font-weight-bold mb-2" style="color: var(--gray-800);">
+            <i class="fas fa-university text-primary me-3"></i>
+            Minhas Contas
+        </h1>
+        <p class="text-muted">Gerencie suas contas bancárias e cartões de crédito</p>
+    </div>
+    <div class="d-flex gap-3">
+        <button class="modern-btn modern-btn-success" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+            <i class="fas fa-plus"></i>
+            Nova Conta
+        </button>
+        <button class="modern-btn modern-btn-primary" onclick="modernSyncAccount()">
+            <i class="fas fa-sync-alt"></i>
+            Sincronizar
+        </button>
+    </div>
+</div>
+
+{% if accounts %}
+<!-- Summary Cards -->
+<div class="stats-grid mb-6">
+    <div class="stat-card fade-in-up">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ accounts|length|integer_br }}</h3>
+                <p>Total de Contas</p>
+            </div>
+            <div class="stat-icon stat-icon-accounts">
+                <i class="fas fa-university"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card fade-in-up-delay-1">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ accounts|map(attribute="balance")|sum|currency_br }}</h3>
+                <p>Saldo Total</p>
+            </div>
+            <div class="stat-icon stat-icon-balance">
+                <i class="fas fa-wallet"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card fade-in-up-delay-2">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ accounts|selectattr("balance", "gt", 0)|list|length }}</h3>
+                <p>Contas Positivas</p>
+            </div>
+            <div class="stat-icon stat-icon-success">
+                <i class="fas fa-arrow-trend-up"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card fade-in-up-delay-3">
+        <div class="stat-content">
+            <div class="stat-info">
+                <h3>{{ accounts|selectattr("is_manual", "equalto", true)|list|length }}</h3>
+                <p>Contas Manuais</p>
+            </div>
+            <div class="stat-icon stat-icon-income">
+                <i class="fas fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accounts Grid -->
+<div class="accounts-grid">
+    {% for account in accounts %}
+    <div class="account-card fade-in-up">
+        <div class="account-header {% if account.is_manual %}account-manual{% else %}account-sync{% endif %}">
+            <div class="account-info">
+                <h5 class="account-title">{{ account.name }}</h5>
+                <div class="account-meta">
+                    <span class="account-type">{{ account.type or 'N/A' }}</span>
+                    {% if account.subtype %}
+                    <span class="account-separator">•</span>
+                    <span class="account-subtype">{{ account.subtype }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="account-icon">
+                <i class="fas fa-university"></i>
+            </div>
+        </div>
+
+        <div class="account-body">
+            <div class="account-balance">
+                <h3 class="balance-amount {% if account.balance >= 0 %}amount-positive{% else %}amount-negative{% endif %}">
+                    {{ account.balance|currency_br }}
+                </h3>
+                <span class="balance-currency">{{ account.currency_code or 'BRL' }}</span>
+            </div>
+
+            <div class="account-details">
+                <div class="detail-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Atualizada: {{ account.last_updated[:16] if account.last_updated else 'N/A' }}</span>
+                </div>
+                {% if account.connection_name %}
+                <div class="detail-item">
+                    <i class="fas fa-link"></i>
+                    <span>{{ account.connection_name }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-item">
+                    <i class="fas fa-{{ 'hand-holding-dollar' if account.is_manual else 'sync-alt' }}"></i>
+                    <span class="modern-badge {% if account.is_manual %}modern-badge-success{% else %}modern-badge-primary{% endif %}">
+                        {{ account.source_type }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="account-footer">
+            <a href="{{ url_for('transactions', account_id=account.id) }}" 
+               class="modern-btn modern-btn-sm modern-btn-outline">
+                <i class="fas fa-eye"></i>
+                Transações
+            </a>
+            {% if account.is_manual %}
+            <button class="modern-btn modern-btn-sm modern-btn-outline" 
+                    onclick="editAccount('{{ account.id }}')">
+                <i class="fas fa-edit"></i>
+                Editar
+            </button>
+            <button class="modern-btn modern-btn-sm modern-btn-danger" 
+                    onclick="deleteAccount('{{ account.id }}', '{{ account.name }}')">
+                <i class="fas fa-trash"></i>
+                Excluir
+            </button>
+            {% else %}
+            <div class="sync-indicator">
+                <i class="fas fa-shield-check text-success"></i>
+                <span class="text-muted">Sincronizada</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Account Types Summary -->
+{% set account_types = accounts|groupby('type') %}
+{% if account_types|length > 1 %}
+<div class="modern-card mt-6">
+    <div class="modern-card-header">
+        <h5>
+            <i class="fas fa-chart-pie text-primary"></i>
+            Resumo por Tipo de Conta
+        </h5>
+    </div>
+    <div class="modern-card-body">
+        <div class="modern-table-container">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Tipo de Conta</th>
+                        <th class="text-center">Quantidade</th>
+                        <th class="text-right">Saldo Total</th>
+                        <th class="text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account_type, type_accounts in account_types %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="type-icon">
+                                    <i class="fas fa-university text-primary"></i>
+                                </div>
+                                <span class="font-weight-medium">{{ account_type or 'Não especificado' }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="modern-badge modern-badge-secondary">
+                                {{ type_accounts|list|length|integer_br }}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            {% set type_balance = type_accounts|map(attribute="balance")|sum %}
+                            <span class="font-weight-semibold {% if type_balance >= 0 %}amount-positive{% else %}amount-negative{% endif %}">
+                                {{ type_balance|currency_br }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="modern-badge modern-badge-success">
+                                <i class="fas fa-check-circle"></i>
+                                Ativo
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Empty State -->
+<div class="empty-state">
+    <div class="empty-icon">
+        <i class="fas fa-university"></i>
+    </div>
+    <h3>Nenhuma conta encontrada</h3>
+    <p class="text-muted">Conecte suas contas bancárias ou crie uma conta manual para começar</p>
+    <div class="empty-actions">
+        <button class="modern-btn modern-btn-primary modern-btn-lg" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+            <i class="fas fa-plus"></i>
+            Criar Conta Manual
+        </button>
+        <button class="modern-btn modern-btn-outline modern-btn-lg" onclick="modernSyncAccount()">
+            <i class="fas fa-sync-alt"></i>
+            Sincronizar Dados
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal de Criação de Conta -->
+<div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createAccountModalLabel">
+                    <i class="fas fa-plus me-2"></i>Nova Conta Manual
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createAccountForm">
+                    <div class="mb-3">
+                        <label for="create_name" class="form-label">Nome da Conta *</label>
+                        <input type="text" class="form-control" id="create_name" name="name" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="create_type" class="form-label">Tipo de Conta *</label>
+                                <select class="form-select" id="create_type" name="type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="BANK">BANK</option>
+                                    <option value="CREDIT">CREDIT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="create_subtype" class="form-label">Subtipo</label>
+                                <input type="text" class="form-control" id="create_subtype" name="subtype">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="create_balance" class="form-label">Saldo Inicial</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="create_balance" name="balance" 
+                                           placeholder="0,00" value="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="create_currency" class="form-label">Moeda</label>
+                                <select class="form-select" id="create_currency" name="currency_code">
+                                    <option value="BRL">BRL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="saveAccountBtn">
+                    <i class="fas fa-save me-1"></i>Criar Conta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edição de Conta -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAccountModalLabel">
+                    <i class="fas fa-edit me-2"></i>Editar Conta Manual
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAccountForm">
+                    <input type="hidden" id="edit_account_id" name="account_id">
+                    
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Nome da Conta *</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_type" class="form-label">Tipo de Conta *</label>
+                                <select class="form-select" id="edit_type" name="type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="BANK">BANK</option>
+                                    <option value="CREDIT">CREDIT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_subtype" class="form-label">Subtipo</label>
+                                <input type="text" class="form-control" id="edit_subtype" name="subtype">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="edit_balance" class="form-label">Saldo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="text" class="form-control" id="edit_balance" name="balance" 
+                                           placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_currency" class="form-label">Moeda</label>
+                                <select class="form-select" id="edit_currency" name="currency_code">
+                                    <option value="BRL">BRL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="updateAccountBtn">
+                    <i class="fas fa-save me-1"></i>Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Função para formatar valor para moeda brasileira
+    function formatCurrencyBR(value) {
+        if (!value) return '0,00';
+        
+        // Remove caracteres não numéricos, exceto vírgula
+        let cleanValue = value.toString().replace(/[^\d,]/g, '');
+        
+        // Se não tem vírgula, adiciona ,00
+        if (!cleanValue.includes(',')) {
+            cleanValue = cleanValue + ',00';
+        }
+        
+        // Separa parte inteira da decimal
+        let parts = cleanValue.split(',');
+        let integerPart = parts[0] || '0';
+        let decimalPart = parts[1] || '00';
+        
+        // Limita decimal a 2 dígitos
+        decimalPart = decimalPart.substring(0, 2).padEnd(2, '0');
+        
+        // Adiciona pontos a cada 3 dígitos na parte inteira
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        
+        return integerPart + ',' + decimalPart;
+    }
+    
+    // Função para converter valor brasileiro para número
+    function parseCurrencyBR(value) {
+        if (!value) return 0;
+        
+        // Remove R$, espaços e pontos (separadores de milhares)
+        let cleanValue = value.replace(/[R$\s\.]/g, '');
+        
+        // Substitui vírgula por ponto
+        cleanValue = cleanValue.replace(',', '.');
+        
+        return parseFloat(cleanValue) || 0;
+    }
+    
+    // Aplicar máscara nos campos de valor
+    function applyBalanceMask(input) {
+        input.addEventListener('input', function(e) {
+            e.target.value = formatCurrencyBR(e.target.value);
+        });
+        
+        input.addEventListener('blur', function(e) {
+            if (!e.target.value) {
+                e.target.value = '0,00';
+            }
+        });
+    }
+    
+    // Aplicar máscaras
+    applyBalanceMask(document.getElementById('create_balance'));
+    applyBalanceMask(document.getElementById('edit_balance'));
+    
+    // Criar conta
+    document.getElementById('saveAccountBtn').addEventListener('click', function() {
+        const form = document.getElementById('createAccountForm');
+        const formData = new FormData(form);
+        
+        // Converter valor brasileiro para formato americano
+        const balanceBR = formData.get('balance');
+        const balanceUS = parseCurrencyBR(balanceBR);
+        formData.set('balance', balanceUS.toString());
+        
+        const data = Object.fromEntries(formData);
+        
+        fetch('/accounts/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal e recarregar página
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createAccountModal'));
+                modal.hide();
+                window.location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao criar conta');
+        });
+    });
+    
+    // Editar conta
+    document.getElementById('updateAccountBtn').addEventListener('click', function() {
+        const form = document.getElementById('editAccountForm');
+        const formData = new FormData(form);
+        const accountId = formData.get('account_id');
+        
+        // Converter valor brasileiro para formato americano
+        const balanceBR = formData.get('balance');
+        const balanceUS = parseCurrencyBR(balanceBR);
+        formData.set('balance', balanceUS.toString());
+        
+        const data = Object.fromEntries(formData);
+        delete data.account_id; // Remover do corpo da requisição
+        
+        fetch(`/accounts/${accountId}/edit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal e recarregar página
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editAccountModal'));
+                modal.hide();
+                window.location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar conta');
+        });
+    });
+});
+
+// Função para editar conta
+function editAccount(accountId) {
+    fetch(`/accounts/${accountId}/edit`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const account = data.account;
+            
+            // Preencher formulário
+            document.getElementById('edit_account_id').value = account.id;
+            document.getElementById('edit_name').value = account.name || '';
+            document.getElementById('edit_type').value = account.type || '';
+            document.getElementById('edit_subtype').value = account.subtype || '';
+            document.getElementById('edit_balance').value = account.balance ? account.balance.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0,00';
+            document.getElementById('edit_currency').value = account.currency_code || 'BRL';
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('editAccountModal'));
+            modal.show();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao carregar dados da conta');
+    });
+}
+
+// Função para excluir conta
+function deleteAccount(accountId, accountName) {
+    // Primeiro, buscar informações sobre transações da conta
+    fetch(`/accounts/${accountId}/transaction-count`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const transactionCount = data.transaction_count;
+            let confirmMessage;
+            
+            if (transactionCount > 0) {
+                confirmMessage = `⚠️ ATENÇÃO: A conta "${accountName}" possui ${transactionCount} transação(ões) associada(s).\n\n` +
+                               `Se você excluir esta conta, TODAS as ${transactionCount} transação(ões) também serão PERMANENTEMENTE excluídas!\n\n` +
+                               `Esta ação NÃO PODE ser desfeita.\n\n` +
+                               `Tem certeza que deseja continuar?`;
+            } else {
+                confirmMessage = `Tem certeza que deseja excluir a conta "${accountName}"?\n\nEsta ação não pode ser desfeita.`;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // Proceder com a exclusão
+                fetch(`/accounts/${accountId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (transactionCount > 0) {
+                            alert(`✅ Conta "${accountName}" e ${transactionCount} transação(ões) foram excluídas com sucesso!`);
+                        } else {
+                            alert(`✅ Conta "${accountName}" foi excluída com sucesso!`);
+                        }
+                        window.location.reload();
+                    } else {
+                        alert('❌ Erro: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('❌ Erro ao excluir conta');
+                });
+            }
+        } else {
+            alert('❌ Erro ao verificar transações: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao verificar informações da conta');
+    });
+}
+</script>
+
+<!-- Create Account Modal -->
+<div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content modern-card" style="border: none;">
+            <div class="modal-header" style="background: var(--bg-secondary); border-bottom: 1px solid var(--gray-200);">
+                <h5 class="modal-title" id="createAccountModalLabel">
+                    <i class="fas fa-plus text-success me-2"></i>Nova Conta Manual
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: var(--spacing-6);">
+                <form id="createAccountForm">
+                    <div class="modern-form-group">
+                        <label for="create_name" class="modern-form-label">Nome da Conta *</label>
+                        <input type="text" class="modern-form-control" id="create_name" name="name" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="create_type" class="modern-form-label">Tipo de Conta *</label>
+                                <select class="modern-form-control" id="create_type" name="type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="BANK">Conta Bancária</option>
+                                    <option value="CREDIT">Cartão de Crédito</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="create_subtype" class="modern-form-label">Subtipo</label>
+                                <input type="text" class="modern-form-control" id="create_subtype" name="subtype" placeholder="Ex: Conta Corrente">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="modern-form-group">
+                                <label for="create_balance" class="modern-form-label">Saldo Inicial</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: var(--gray-100); border-color: var(--gray-300);">R$</span>
+                                    <input type="text" class="modern-form-control" id="create_balance" name="balance" 
+                                           placeholder="0,00" value="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="modern-form-group">
+                                <label for="create_currency" class="modern-form-label">Moeda</label>
+                                <select class="modern-form-control" id="create_currency" name="currency_code">
+                                    <option value="BRL">BRL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--gray-200); padding: var(--spacing-4) var(--spacing-6);">
+                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="modern-btn modern-btn-success" id="saveAccountBtn">
+                    <i class="fas fa-save"></i>
+                    Criar Conta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Account Modal -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content modern-card" style="border: none;">
+            <div class="modal-header" style="background: var(--bg-secondary); border-bottom: 1px solid var(--gray-200);">
+                <h5 class="modal-title" id="editAccountModalLabel">
+                    <i class="fas fa-edit text-warning me-2"></i>Editar Conta Manual
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: var(--spacing-6);">
+                <form id="editAccountForm">
+                    <input type="hidden" id="edit_account_id" name="account_id">
+                    
+                    <div class="modern-form-group">
+                        <label for="edit_name" class="modern-form-label">Nome da Conta *</label>
+                        <input type="text" class="modern-form-control" id="edit_name" name="name" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="edit_type" class="modern-form-label">Tipo de Conta *</label>
+                                <select class="modern-form-control" id="edit_type" name="type" required>
+                                    <option value="">Selecione um tipo</option>
+                                    <option value="BANK">Conta Bancária</option>
+                                    <option value="CREDIT">Cartão de Crédito</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="modern-form-group">
+                                <label for="edit_subtype" class="modern-form-label">Subtipo</label>
+                                <input type="text" class="modern-form-control" id="edit_subtype" name="subtype" placeholder="Ex: Conta Corrente">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="modern-form-group">
+                                <label for="edit_balance" class="modern-form-label">Saldo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: var(--gray-100); border-color: var(--gray-300);">R$</span>
+                                    <input type="text" class="modern-form-control" id="edit_balance" name="balance" 
+                                           placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="modern-form-group">
+                                <label for="edit_currency" class="modern-form-label">Moeda</label>
+                                <select class="modern-form-control" id="edit_currency" name="currency_code">
+                                    <option value="BRL">BRL</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--gray-200); padding: var(--spacing-4) var(--spacing-6);">
+                <button type="button" class="modern-btn modern-btn-outline" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="modern-btn modern-btn-warning" id="updateAccountBtn">
+                    <i class="fas fa-save"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Accounts page specific styles */
+.accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: var(--spacing-6);
+    margin-bottom: var(--spacing-8);
+}
+
+.account-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-base);
+    transition: var(--transition-base);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.account-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.account-header {
+    padding: var(--spacing-5) var(--spacing-6);
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.account-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+}
+
+.account-header.account-manual::before {
+    background: linear-gradient(135deg, var(--success-color) 0%, var(--success-light) 100%);
+}
+
+.account-info {
+    flex: 1;
+}
+
+.account-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0 0 var(--spacing-1);
+}
+
+.account-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--gray-600);
+    font-size: var(--font-size-sm);
+}
+
+.account-type, .account-subtype {
+    font-weight: 500;
+}
+
+.account-separator {
+    color: var(--gray-400);
+}
+
+.account-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--border-radius-full);
+    background: rgba(37, 99, 235, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-size: 1.25rem;
+}
+
+.account-manual .account-icon {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+}
+
+.account-body {
+    padding: var(--spacing-6);
+}
+
+.account-balance {
+    text-align: center;
+    margin-bottom: var(--spacing-5);
+}
+
+.balance-amount {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    margin: 0;
+}
+
+.balance-currency {
+    color: var(--gray-600);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.account-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--gray-600);
+    font-size: var(--font-size-sm);
+}
+
+.detail-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.account-footer {
+    padding: var(--spacing-4) var(--spacing-6);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    gap: var(--spacing-2);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-left: auto;
+    font-size: var(--font-size-sm);
+}
+
+.type-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--border-radius-base);
+    background: rgba(37, 99, 235, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon-success {
+    background: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-16) var(--spacing-8);
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-base);
+}
+
+.empty-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--border-radius-full);
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-6);
+    font-size: 3rem;
+    color: var(--gray-400);
+}
+
+.empty-state h3 {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: var(--spacing-3);
+}
+
+.empty-state p {
+    font-size: var(--font-size-lg);
+    color: var(--gray-600);
+    margin-bottom: var(--spacing-6);
+}
+
+.empty-actions {
+    display: flex;
+    gap: var(--spacing-4);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .accounts-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-4);
+    }
+    
+    .account-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .account-footer .modern-btn {
+        justify-content: center;
+    }
+    
+    .sync-indicator {
+        margin-left: 0;
+        justify-content: center;
+    }
+    
+    .empty-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
+{% endblock %}

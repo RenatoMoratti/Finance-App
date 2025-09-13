@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Conexões - Finance App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-link me-2 text-primary"></i>Gerenciar Conexões
+            </h2>
+            <a href="{{ url_for('add_connection') }}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Adicionar Conexão
+            </a>
+        </div>
+
+        <!-- Resumo das Conexões -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <i class="fas fa-database fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">{{ connections_data.total_connections }}</h5>
+                        <p class="card-text text-muted">Total de Conexões</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">{{ connections_data.active_connections }}</h5>
+                        <p class="card-text text-muted">Conexões Ativas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                        <h5 class="card-title">{{ connections_data.inactive_connections }}</h5>
+                        <p class="card-text text-muted">Conexões Inativas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Conexões -->
+        {% if connections_data.connections %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-1"></i>Suas Conexões OAuth
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Banco/Instituição</th>
+                                <th>Status</th>
+                                <th>Dados desde</th>
+                                <th>Criado em</th>
+                                <th>Última Atualização</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_id, connection in connections_data.connections.items() %}
+                            <tr id="connection-{{ item_id }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if connection.status == 'active' %}
+                                        <i class="fas fa-university text-success me-2"></i>
+                                        {% else %}
+                                        <i class="fas fa-university text-muted me-2"></i>
+                                        {% endif %}
+                                        <div>
+                                            <strong class="connection-name">{{ connection.bank_name }}</strong>
+                                            <br>
+                                            <small class="text-muted">ID: {{ item_id[:8] }}...</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if connection.status == 'active' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Ativa
+                                    </span>
+                                    {% elif connection.status == 'pending' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>Pendente
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-times me-1"></i>Inativa
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="min-width:140px">
+                                        <input type="date" class="form-control form-control-sm" id="data-since-{{ item_id }}" value="{{ connection.data_since if connection.data_since }}" onchange="saveDataSince('{{ item_id }}')">
+                                        <small class="text-muted d-block mt-1" id="data-since-status-{{ item_id }}"></small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>{{ connection.created_at[:19] | replace('T', ' ') }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ connection.last_updated[:19] | replace('T', ' ') }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="editConnectionName('{{ item_id }}', '{{ connection.bank_name }}')"
+                                                title="Editar Nome">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% if connection.status == 'active' %}
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="syncConnection('{{ item_id }}')"
+                                                title="Sincronizar Dados">
+                                            <i class="fas fa-sync"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="showConnectionStats('{{ item_id }}')"
+                                                title="Ver Estatísticas">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </button>
+                                        {% elif connection.status == 'pending' %}
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="checkConnectionStatus('{{ item_id }}')"
+                                                title="Verificar Status">
+                                            <i class="fas fa-sync"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="removeConnection('{{ item_id }}', '{{ connection.bank_name }}')"
+                                                title="Remover Conexão">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Nenhuma Conexão -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-bank fa-4x text-muted mb-3"></i>
+                <h4>Bem-vindo ao Finance App!</h4>
+                <p class="text-muted mb-4">
+                    Para começar a usar o Finance App, você precisa conectar suas contas bancárias.
+                    <br>Cada conta (Itaú, Nubank, Bradesco, etc.) será uma conexão OAuth independente.
+                    <br><strong>Você pode ter quantas contas quiser conectadas simultaneamente!</strong>
+                </p>
+                
+                <div class="alert alert-info text-start mb-4">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-1"></i>Como funciona:
+                    </h6>
+                    <ol class="mb-0">
+                        <li>Clique em "Adicionar Primeira Conexão"</li>
+                        <li>Digite o nome do seu banco (ex: "Itaú", "Nubank")</li>
+                        <li>Complete a autorização OAuth no Meu Pluggy</li>
+                        <li>Repita para cada conta que deseja conectar</li>
+                        <li>Sincronize todas as contas de uma vez no Dashboard</li>
+                    </ol>
+                </div>
+                
+                <a href="{{ url_for('add_connection') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Adicionar Primeira Conexão
+                </a>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Informações Importantes -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-1"></i>Informações Importantes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">🔒 Segurança</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-1"></i> Conexões OAuth criptografadas</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Dados salvos localmente</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Sem armazenamento de senhas</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">⚙️ Funcionalidades</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-1"></i> Múltiplas contas bancárias</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Sincronização automática</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Gerenciamento individual</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegação -->
+        <div class="text-center mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i>Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar Nome -->
+<div class="modal fade" id="editNameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Nome da Conexão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="newConnectionName" class="form-label">Nome da Instituição Bancária</label>
+                    <input type="text" class="form-control" id="newConnectionName" 
+                           placeholder="Ex: Itaú, Nubank, Bradesco...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveConnectionName()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Estatísticas -->
+<div class="modal fade" id="statsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar me-2"></i>Estatísticas da Conexão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="card bg-primary text-white mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="mb-0" id="statsAccounts">0</h4>
+                                <small>Contas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-success text-white mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="mb-0" id="statsTransactions">0</h4>
+                                <small>Transações</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="card bg-info text-white mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="mb-0" id="statsBalance">R$ 0,00</h5>
+                                <small>Saldo Total</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-warning text-white mb-3">
+                            <div class="card-body text-center">
+                                <small class="mb-0" id="statsLastTransaction">-</small>
+                                <br><small>Última Transação</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Remoção -->
+<div class="modal fade" id="removeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Remoção
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Atenção!</strong> Você está prestes a remover a conexão <strong id="removeBankName"></strong>.
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="removeDataCheckbox">
+                    <label class="form-check-label" for="removeDataCheckbox">
+                        <strong>Remover também todas as transações e contas desta conexão do banco de dados</strong>
+                    </label>
+                    <div class="form-text">
+                        Se marcado, todos os dados financeiros desta conexão serão permanentemente removidos.
+                        Se não marcado, apenas a conexão será removida, mantendo os dados históricos.
+                    </div>
+                </div>
+                
+                <input type="hidden" id="removeItemId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="executeRemoveConnection()">
+                    <i class="fas fa-trash me-1"></i>Confirmar Remoção
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentEditingItemId = null;
+
+function editConnectionName(itemId, currentName) {
+    currentEditingItemId = itemId;
+    document.getElementById('newConnectionName').value = currentName;
+    new bootstrap.Modal(document.getElementById('editNameModal')).show();
+}
+
+function saveConnectionName() {
+    const newName = document.getElementById('newConnectionName').value.trim();
+    
+    if (!newName) {
+        alert('Nome não pode estar vazio');
+        return;
+    }
+    
+    fetch(`/update_connection_name/${currentEditingItemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bank_name: newName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Atualiza a exibição na tabela
+            const row = document.getElementById(`connection-${currentEditingItemId}`);
+            if (row) {
+                const nameElement = row.querySelector('.connection-name');
+                if (nameElement) {
+                    nameElement.textContent = newName;
+                }
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('editNameModal')).hide();
+            showAlert('success', data.message);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Erro ao atualizar nome: ' + error);
+    });
+}
+
+function removeConnection(itemId, bankName) {
+    if (!confirm(`Tem certeza que deseja remover a conexão "${bankName}"?\n\nIsso irá desconectar esta conta do seu Finance App.`)) {
+        return;
+    }
+    
+    fetch(`/remove_connection/${itemId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove a linha da tabela
+            const row = document.getElementById(`connection-${itemId}`);
+            if (row) {
+                row.remove();
+            }
+            
+            showAlert('success', data.message);
+            
+            // Recarrega a página se não há mais conexões
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Erro ao remover conexão: ' + error);
+    });
+}
+
+function checkConnectionStatus(itemId) {
+    const button = event.target.closest('button');
+    const originalHtml = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch(`/check_oauth_status/${itemId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.status === 'completed') {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('info', data.message);
+            }
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Erro ao verificar status: ' + error);
+    })
+    .finally(() => {
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+    });
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.style.cssText = 'position: relative; z-index: 1050; margin-bottom: 1rem;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Busca por .container ou .container-fluid
+    const container = document.querySelector('.container') || document.querySelector('.container-fluid');
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    } else {
+        // Fallback: adiciona no body
+        document.body.insertBefore(alertDiv, document.body.firstChild);
+    }
+    
+    console.log('Alert adicionado:', message);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+            console.log('Alert removido automaticamente');
+        }
+    }, 5000);
+}
+
+function syncConnection(itemId) {
+    const button = event.target.closest('button');
+    const originalHtml = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch(`/sync_connection/${itemId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', `Sincronização concluída! ${data.accounts} contas e ${data.transactions} transações atualizadas.`);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Erro na sincronização: ' + error);
+    })
+    .finally(() => {
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+    });
+}
+
+function showConnectionStats(itemId) {
+    fetch(`/connection_stats/${itemId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = new bootstrap.Modal(document.getElementById('statsModal'));
+            document.getElementById('statsAccounts').textContent = data.accounts;
+            document.getElementById('statsTransactions').textContent = data.transactions;
+            document.getElementById('statsBalance').textContent = `R$ ${data.total_balance.toFixed(2)}`;
+            document.getElementById('statsLastTransaction').textContent = data.last_transaction || 'Nenhuma';
+            modal.show();
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Erro ao carregar estatísticas: ' + error);
+    });
+}
+
+function confirmRemoveConnection(itemId, bankName) {
+    const modal = new bootstrap.Modal(document.getElementById('removeModal'));
+    document.getElementById('removeItemId').value = itemId;
+    document.getElementById('removeBankName').textContent = bankName;
+    modal.show();
+}
+
+function executeRemoveConnection() {
+    const itemId = document.getElementById('removeItemId').value;
+    const removeData = document.getElementById('removeDataCheckbox').checked;
+    const bankName = document.getElementById('removeBankName').textContent;
+    
+    console.log('Executando remoção:', { itemId, removeData, bankName });
+    
+    // Mostra mensagem de remoção em andamento
+    const modal = bootstrap.Modal.getInstance(document.getElementById('removeModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Aguarda um pouco para garantir que o modal foi fechado
+    setTimeout(() => {
+        showAlert('info', `🔄 Removendo conexão "${bankName}"... Aguarde.`);
+        
+        fetch(`/remove_connection/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                remove_data: removeData
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                showAlert('success', `✅ Conexão "${bankName}" removida com sucesso! ${data.message}`);
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                showAlert('danger', `❌ Erro ao remover "${bankName}": ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+            showAlert('danger', `❌ Erro ao remover conexão "${bankName}": ${error.message}`);
+        });
+    }, 300);
+}
+
+// Atualiza a função removeConnection para usar o modal
+function removeConnection(itemId, bankName) {
+    confirmRemoveConnection(itemId, bankName);
+}
+
+function saveDataSince(itemId) {
+    const input = document.getElementById(`data-since-${itemId}`);
+    const statusEl = document.getElementById(`data-since-status-${itemId}`);
+    const value = input.value;
+    statusEl.textContent = 'Salvando...';
+    fetch(`/update_data_since/${itemId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data_since: value })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            statusEl.textContent = value ? `Aplicado: ${value}` : 'Sem filtro';
+            statusEl.className = 'text-success';
+            showAlert('success', 'Filtro de data atualizado');
+        } else {
+            statusEl.textContent = 'Erro';
+            statusEl.className = 'text-danger';
+            showAlert('danger', data.message || 'Erro ao salvar filtro');
+        }
+    })
+    .catch(err => {
+        statusEl.textContent = 'Erro';
+        statusEl.className = 'text-danger';
+        showAlert('danger', 'Falha na requisição: ' + err);
+    });
+}
+</script>
+{% endblock %}
