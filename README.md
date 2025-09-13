@@ -18,6 +18,7 @@ Aplicativo Flask para consolidar contas e transações via Open Finance usando a
 ---
 ## 1. Requisitos
 - Python 3.11+
+- Git
 - Conta no portal do usuário final: `https://meu.pluggy.ai/`
 - Conta no dashboard de desenvolvedores: `https://dashboard.pluggy.ai/`
 - (Opcional) Ambiente virtual Python
@@ -30,10 +31,10 @@ python --version
 ---
 ## 2. Clonar o Repositório
 ```
-git clone https://github.com/<seu-usuario>/<seu-repo>.git
+git clone https://github.com/RenatoMoratti/Finance-App
 ```
 ```
-cd <seu-repo>
+cd Finance-App
 ```
 
 ---

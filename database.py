@@ -22,6 +22,7 @@ Sistema de banco de dados SQLite para armazenar:
 import sqlite3
 import json
 import uuid
+import os
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 
@@ -184,6 +185,13 @@ class Database:
     
     def init_database(self):
         """Inicializa o banco de dados com as tabelas necess├írias"""
+        # Garante que o diretório do arquivo do banco existe antes de conectar
+        try:
+            db_dir = os.path.dirname(self.db_path)
+            if db_dir and not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
+        except Exception as e:
+            print(f"⚠️ {get_brasilia_time()} Falha ao criar diretório do banco: {e}")
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
