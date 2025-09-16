@@ -24,6 +24,7 @@ from database import Database
 from finance_app import FinanceApp
 from oauth_manager import OAuthManager
 from config import Config
+from settings_manager import settings_manager
 
 app = Flask(__name__)
 app.secret_key = Config.FLASK_SECRET_KEY
@@ -128,6 +129,15 @@ def index():
 def sync_account():
     """Sincroniza dados com Meu Pluggy com atualização forçada"""
     try:
+        # Validação das configurações obrigatórias
+        config_valid, missing_fields = settings_manager.validate_required_settings()
+        if not config_valid:
+            return jsonify({
+                'success': False,
+                'message': f'Configurações obrigatórias não preenchidas: {", ".join(missing_fields)}',
+                'redirect': '/settings'
+            })
+        
         finance_app = FinanceApp()
         
         # Verifica se já tem conexão OAuth
@@ -166,6 +176,15 @@ def sync_account():
 def start_oauth():
     """Inicia o processo OAuth"""
     try:
+        # Validação das configurações obrigatórias
+        config_valid, missing_fields = settings_manager.validate_required_settings()
+        if not config_valid:
+            return jsonify({
+                'success': False,
+                'message': f'Configurações obrigatórias não preenchidas: {", ".join(missing_fields)}. Acesse Configurações para preenchê-las.',
+                'redirect': '/settings'
+            })
+        
         finance_app = FinanceApp()
         
         # Autentica
@@ -948,6 +967,15 @@ def check_oauth_status(item_id):
 def sync_connection(item_id):
     """Força sincronização de uma conexão específica"""
     try:
+        # Validação das configurações obrigatórias
+        config_valid, missing_fields = settings_manager.validate_required_settings()
+        if not config_valid:
+            return jsonify({
+                'success': False,
+                'message': f'Configurações obrigatórias não preenchidas: {", ".join(missing_fields)}. Acesse Configurações para preenchê-las.',
+                'redirect': '/settings'
+            })
+        
         finance_app = FinanceApp()
         result = finance_app.sync_single_connection(item_id)
         
@@ -1292,6 +1320,84 @@ def api_suggest_categories():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ========================================
+# CONFIGURAÇÕES DO SISTEMA
+# ========================================
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings_page():
+    """Página de configurações do sistema"""
+    if request.method == 'POST':
+        try:
+            # Obtém os dados do formulário
+            flask_secret_key = request.form.get('flask_secret_key', '').strip()
+            pluggy_client_id = request.form.get('pluggy_client_id', '').strip()
+            pluggy_client_secret = request.form.get('pluggy_client_secret', '').strip()
+            
+            # Valida se todos os campos estão preenchidos
+            if not flask_secret_key or not pluggy_client_id or not pluggy_client_secret:
+                flash('Todos os campos são obrigatórios!', 'error')
+                return redirect(url_for('settings_page'))
+            
+            # Salva as configurações
+            success = settings_manager.save_settings(
+                flask_secret_key=flask_secret_key,
+                pluggy_client_id=pluggy_client_id,
+                pluggy_client_secret=pluggy_client_secret
+            )
+            
+            if success:
+                flash('Configurações salvas com sucesso!', 'success')
+                
+                # Atualiza a chave secreta do Flask na instância atual
+                app.secret_key = flask_secret_key
+                
+                # Recarrega as configurações no módulo Config
+                Config.reload_from_settings()
+                
+            else:
+                flash('Erro ao salvar as configurações.', 'error')
+                
+        except Exception as e:
+            flash(f'Erro inesperado: {e}', 'error')
+        
+        return redirect(url_for('settings_page'))
+    
+    # GET - Exibe a página
+    try:
+        # Carrega configurações atuais
+        config = settings_manager.get_settings()
+        config_valid, missing_fields = settings_manager.validate_required_settings()
+        
+        return render_template('settings.html', 
+                             config=config,
+                             config_valid=config_valid,
+                             missing_fields=missing_fields,
+                             settings_file=settings_manager.settings_file)
+    except Exception as e:
+        flash(f'Erro ao carregar configurações: {e}', 'error')
+        return render_template('settings.html', 
+                             config={'flask_secret_key': None, 'pluggy_client_id': None, 'pluggy_client_secret': None},
+                             config_valid=False,
+                             missing_fields=['FLASK_SECRET_KEY', 'PLUGGY_CLIENT_ID', 'PLUGGY_CLIENT_SECRET'],
+                             settings_file=settings_manager.settings_file)
+
+@app.route('/api/settings/validate', methods=['GET'])
+def api_validate_settings():
+    """API para validar se as configurações estão completas"""
+    try:
+        config_valid, missing_fields = settings_manager.validate_required_settings()
+        return jsonify({
+            'success': True,
+            'config_valid': config_valid,
+            'missing_fields': missing_fields
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao validar configurações: {e}'
+        })
 
 def open_browser():
     """Abre o navegador automaticamente após um pequeno delay"""

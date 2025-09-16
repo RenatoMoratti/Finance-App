@@ -5,6 +5,7 @@ __pycache__/
 *.db
 data/*.db
 data/oauth_connections.json
+data/app_settings.json
 .env
 .env.local
 .env.*.local
@@ -125,3 +126,13 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Finance App - Arquivos sensíveis de configuração
+data/app_settings.json
+data/oauth_*.json
+data/*_credentials.json
+data/*_config.json
+*.key
+*.pem
+secrets/
+credentials/
