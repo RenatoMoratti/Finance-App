@@ -176,7 +176,7 @@ class Database:
         if db_path is None:
             try:
                 from config import Config
-                self.db_path = getattr(Config, 'DATABASE_PATH', 'data/finance_app_dev.db')
+                self.db_path = Config.get_database_path()
             except Exception:
                 self.db_path = 'data/finance_app_dev.db'
         else:

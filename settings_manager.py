@@ -12,8 +12,16 @@ from datetime import datetime
 from typing import Dict, Optional, List, Tuple
 
 class SettingsManager:
-    def __init__(self, settings_file: str = "data/app_settings.json"):
-        self.settings_file = settings_file
+    def __init__(self, settings_file: str = None):
+        if settings_file is None:
+            # Importação local para evitar dependência circular
+            try:
+                from environment_manager import environment_manager
+                self.settings_file = environment_manager.get_settings_file_path()
+            except Exception:
+                self.settings_file = "data/app_settings.json"
+        else:
+            self.settings_file = settings_file
         self._ensure_settings_directory()
     
     def _ensure_settings_directory(self):

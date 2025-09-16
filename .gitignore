@@ -129,6 +129,8 @@ dmypy.json
 
 # Finance App - Arquivos sensíveis de configuração
 data/app_settings.json
+data/app_settings_*.json
+data/app_environment.json
 data/oauth_*.json
 data/*_credentials.json
 data/*_config.json

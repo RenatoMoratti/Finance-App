@@ -25,6 +25,7 @@ from finance_app import FinanceApp
 from oauth_manager import OAuthManager
 from config import Config
 from settings_manager import settings_manager
+from environment_manager import environment_manager
 
 app = Flask(__name__)
 app.secret_key = Config.FLASK_SECRET_KEY
@@ -36,6 +37,14 @@ def inject_pending_mappings():
         return {'pending_mappings_global': db.count_unmapped_categories()}
     except Exception:
         return {'pending_mappings_global': 0}
+
+# Context processor para disponibilizar informações do ambiente
+@app.context_processor
+def inject_environment_info():
+    try:
+        return {'environment_info': environment_manager.get_environment_info()}
+    except Exception:
+        return {'environment_info': {'environment': 'development', 'environment_display': 'DEV'}}
 
 # Função para formatação brasileira de valores
 def format_currency_br(value):
@@ -1397,6 +1406,70 @@ def api_validate_settings():
         return jsonify({
             'success': False,
             'message': f'Erro ao validar configurações: {e}'
+        })
+
+# ========================================
+# GERENCIAMENTO DE AMBIENTE (PROD/DEV)
+# ========================================
+
+@app.route('/api/environment/switch', methods=['POST'])
+def switch_environment():
+    """API para alternar entre ambientes PROD e DEV"""
+    try:
+        success, old_env, new_env = environment_manager.switch_environment()
+        
+        if success:
+            # Recarrega as configurações após mudança de ambiente
+            Config.reload_from_settings()
+            
+            # Reinicializa o database com o novo caminho
+            global db
+            new_db_path = Config.get_database_path()
+            print(f"🔄 Alterando banco: {db.db_path} → {new_db_path}")
+            db = Database()
+            print(f"✅ Novo banco inicializado: {db.db_path}")
+            
+            # Reinicializa o settings_manager com o novo arquivo
+            global settings_manager
+            from settings_manager import SettingsManager
+            settings_manager = SettingsManager()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Ambiente alterado de {old_env.upper()} para {new_env.upper()}',
+                'old_environment': old_env,
+                'new_environment': new_env,
+                'environment_info': environment_manager.get_environment_info()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Erro ao alternar ambiente'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao alternar ambiente: {e}'
+        })
+
+@app.route('/api/environment/info', methods=['GET'])
+def get_environment_info():
+    """API para obter informações do ambiente atual"""
+    try:
+        env_info = environment_manager.get_environment_info()
+        # Adiciona informações de debug do banco atual
+        env_info['current_db_path'] = db.db_path if db else 'N/A'
+        env_info['accounts_count'] = len(db.get_accounts()) if db else 0
+        
+        return jsonify({
+            'success': True,
+            'environment_info': env_info
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao obter informações do ambiente: {e}'
         })
 
 def open_browser():

@@ -201,6 +201,69 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
+/* Botão de ambiente - menor e mais discreto */
+.environment-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-base);
+  transition: var(--transition-base);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-left: var(--spacing-2);
+  min-width: 50px;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  line-height: 1;
+}
+
+.environment-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--white) !important;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.environment-btn.production {
+  background: rgba(21, 128, 61, 0.1);
+  border-color: rgba(21, 128, 61, 0.2);
+  color: rgba(21, 128, 61, 0.9) !important;
+}
+
+.environment-btn.production:hover {
+  background: rgba(21, 128, 61, 0.2);
+  border-color: rgba(21, 128, 61, 0.4);
+  color: rgba(21, 128, 61, 1) !important;
+}
+
+/* Navbar em ambiente DEV - cor diferenciada */
+.modern-navbar.dev-environment {
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%) !important;
+}
+
+.modern-navbar.dev-environment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706, #fbbf24);
+  background-size: 200% 100%;
+  animation: devIndicator 3s linear infinite;
+}
+
+@keyframes devIndicator {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Modern Cards */
 .modern-card {
   background: var(--bg-gradient-surface);
@@ -819,7 +882,15 @@ tr.modern-table-row-verified.modern-table-row-ignored td * {
   .sync-btn {
     padding: var(--spacing-2) var(--spacing-2);
     font-size: 0.85rem;
-    margin-left: var(--spacing-2);
+    margin-left: var(--spacing-1);
+  }
+  
+  .environment-btn {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    margin-left: var(--spacing-1);
+    min-width: 45px;
+    height: 30px;
   }
 }
 

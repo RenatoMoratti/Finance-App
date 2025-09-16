@@ -13,6 +13,13 @@
             <p class="text-muted font-weight-medium">
                 Gerencie suas finanças de forma inteligente e moderna
             </p>
+            <!-- DEBUG: Indicador de ambiente e banco -->
+            <div class="mt-2">
+                <small class="badge bg-info">
+                    🗃️ Ambiente: {{ environment_info.environment_display }} | 
+                    📊 Banco: {{ environment_info.database_path }}
+                </small>
+            </div>
             {% if pending_mappings and pending_mappings > 0 %}
             <div class="mt-2">
                 <a href="{{ url_for('category_mappings_page') }}" class="modern-badge modern-badge-warning" style="text-decoration:none;">

@@ -47,17 +47,45 @@ class Config:
     
     # Configurações que vêm das variáveis de ambiente
     PLUGGY_BASE_URL = os.getenv("PLUGGY_BASE_URL", "https://api.pluggy.ai")
-    APP_ENV = os.getenv("APP_ENV", "development")
     
-    # Banco de Dados
-    _explicit_db = os.getenv("DATABASE_PATH")
-    if _explicit_db:
-        DATABASE_PATH = _explicit_db
-    else:
-        if os.getenv("APP_ENV", "development").lower() == "production":
-            DATABASE_PATH = "data/finance_app_prod.db"
-        else:
-            DATABASE_PATH = "data/finance_app_dev.db"
+    @classmethod
+    def get_database_path(cls):
+        """Obtém o caminho do banco de dados dinamicamente baseado no ambiente atual"""
+        try:
+            from environment_manager import environment_manager
+            return environment_manager.get_database_path()
+        except Exception as e:
+            print(f"⚠️ Erro ao obter caminho do banco: {e}")
+            # Fallback para configuração estática
+            app_env = os.getenv("APP_ENV", "development")
+            if app_env.lower() == "production":
+                return "data/finance_app_prod.db"
+            else:
+                return "data/finance_app_dev.db"
+    
+    @classmethod
+    def get_current_environment(cls):
+        """Obtém o ambiente atual dinamicamente"""
+        try:
+            from environment_manager import environment_manager
+            return environment_manager.get_current_environment()
+        except Exception as e:
+            print(f"⚠️ Erro ao obter ambiente atual: {e}")
+            return os.getenv("APP_ENV", "development")
+    
+    # Propriedades dinâmicas para ambiente e banco de dados
+    @property
+    def DATABASE_PATH(self):
+        return Config.get_database_path()
+    
+    @property 
+    def APP_ENV(self):
+        return Config.get_current_environment()
+    
+    # Para compatibilidade com acesso direto à classe
+    @classmethod
+    def is_production(cls):
+        return cls.get_current_environment().lower() == "production"
 
 # Inicialização das configurações críticas
 Config._load_settings()
@@ -82,6 +110,3 @@ Config.FLASK_SECRET_KEY = (
     "change_me_in_dev_only"
 )
 
-@staticmethod
-def is_production():
-    return Config.APP_ENV.lower() == "production"
