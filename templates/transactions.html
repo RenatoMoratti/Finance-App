@@ -198,7 +198,7 @@
             <form method="GET" class="modern-filters-form">
                 <div class="row g-2 align-items-end">
                     <!-- Account Filter -->
-                    <div class="col-md-2">
+                    <div class="col-lg-2 col-md-3">
                         <label for="account_id" class="form-label form-label-sm">Conta</label>
                         <div class="multi-select-container" data-name="account_id">
                             <div class="multi-select-display" data-placeholder="Todas">
@@ -220,7 +220,7 @@
                     </div>
                     
                     <!-- Status Filter -->
-                    <div class="col-md-2">
+                    <div class="col-lg-1 col-md-2">
                         <label for="verification_filter" class="form-label form-label-sm">Status</label>
                         <div class="multi-select-container" data-name="verification_filter">
                             <div class="multi-select-display" data-placeholder="Todos">
@@ -247,8 +247,32 @@
                         </div>
                     </div>
                     
+                    <!-- Transaction Type Filter -->
+                    <div class="col-lg-1 col-md-2">
+                        <label for="type_filter" class="form-label form-label-sm">Tipo</label>
+                        <div class="multi-select-container" data-name="type_filter">
+                            <div class="multi-select-display" data-placeholder="Todos">
+                                <span class="multi-select-placeholder">Todos</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="type_select_all">
+                                    <label for="type_select_all">✓ Selecionar todos</label>
+                                </div>
+                                <div class="multi-select-option" data-value="CREDIT">
+                                    <input type="checkbox" id="type_credit" value="CREDIT" name="type_filter" {% if 'CREDIT' in (filters.type_filter or []) %}checked{% endif %}>
+                                    <label for="type_credit">💰 Entrada</label>
+                                </div>
+                                <div class="multi-select-option" data-value="DEBIT">
+                                    <input type="checkbox" id="type_debit" value="DEBIT" name="type_filter" {% if 'DEBIT' in (filters.type_filter or []) %}checked{% endif %}>
+                                    <label for="type_debit">💸 Saída</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Category Filter -->
-                    <div class="col-md-2">
+                    <div class="col-lg-2 col-md-3">
                         <label for="user_category" class="form-label form-label-sm">Categoria</label>
                         <div class="multi-select-container" data-name="user_category">
                             <div class="multi-select-display" data-placeholder="Todas">
@@ -274,7 +298,7 @@
                     </div>
                     
                     <!-- Subcategory Filter -->
-                    <div class="col-md-2">
+                    <div class="col-lg-2 col-md-3">
                         <label for="user_subcategory" class="form-label form-label-sm">Subcategoria</label>
                         <div class="multi-select-container" data-name="user_subcategory">
                             <div class="multi-select-display" data-placeholder="Todas">
@@ -300,18 +324,18 @@
                     </div>
                     
                     <!-- Date Filters -->
-                    <div class="col-md-1">
+                    <div class="col-lg-1 col-md-2">
                         <label for="start_date" class="form-label form-label-sm">Data Inicial</label>
                         <input type="datetime-local" class="form-control form-control-sm" id="start_date" name="start_date" value="{{ filters.start_date if filters.start_date else '' }}" step="1">
                     </div>
                     
-                    <div class="col-md-1">
+                    <div class="col-lg-1 col-md-2">
                         <label for="end_date" class="form-label form-label-sm">Data Final</label>
                         <input type="datetime-local" class="form-control form-control-sm" id="end_date" name="end_date" value="{{ filters.end_date if filters.end_date else '' }}" step="1">
                     </div>
                     
                     <!-- Limit Filter -->
-                    <div class="col-md-1">
+                    <div class="col-lg-1 col-md-2">
                         <label for="limit" class="form-label form-label-sm">Limite</label>
                         <select class="form-select form-select-sm" id="limit" name="limit">
                             <option value="50" {% if filters.limit == 50 %}selected{% endif %}>50</option>
@@ -322,7 +346,7 @@
                     </div>
                     
                     <!-- Filter Actions -->
-                    <div class="col-md-1">
+                    <div class="col-lg-1 col-md-2">
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary btn-sm" title="Filtrar">
                                 <i class="fas fa-filter"></i>
@@ -629,7 +653,7 @@
         <div class="modern-results-text">
             <i class="fas fa-info-circle"></i>
             Mostrando {{ transactions|length|integer_br }} transações
-            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter %}
+            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter or filters.type_filter %}
             com filtros aplicados
             {% endif %}
         </div>
@@ -643,13 +667,13 @@
         </div>
         <h4 class="modern-empty-title">Nenhuma transação encontrada</h4>
         <p class="modern-empty-description">
-            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter %}
+            {% if filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter or filters.type_filter %}
             Tente ajustar os filtros ou limpar a pesquisa.
             {% else %}
             Sincronize sua conta para ver as transações.
             {% endif %}
         </p>
-        {% if not (filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter) %}
+        {% if not (filters.account_id or filters.category or filters.user_category or filters.user_subcategory or filters.start_date or filters.end_date or filters.modification_start_date or filters.modification_end_date or filters.verification_filter or filters.type_filter) %}
         <button class="modern-btn modern-btn-primary" onclick="syncAccount()">
             <i class="fas fa-sync-alt"></i>
             Sincronizar Agora
