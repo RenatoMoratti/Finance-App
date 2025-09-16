@@ -201,33 +201,29 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
-/* Botão de ambiente - menor e mais discreto */
+/* Botão de ambiente - igual aos nav-links */
 .environment-btn {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.7) !important;
-  font-weight: 400;
-  padding: 4px 8px;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  padding: var(--spacing-2) var(--spacing-3) !important;
   border-radius: var(--border-radius-base);
   transition: var(--transition-base);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   white-space: nowrap;
-  margin-left: var(--spacing-2);
-  min-width: 50px;
-  opacity: 0.8;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  line-height: 1;
+  margin: 0 var(--spacing-1);
+  min-width: auto;
+  opacity: 1;
+  display: inline-block;
+  text-align: center;
 }
 
 .environment-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
   color: var(--white) !important;
-  opacity: 1;
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .environment-btn.production {
@@ -886,11 +882,9 @@ tr.modern-table-row-verified.modern-table-row-ignored td * {
   }
   
   .environment-btn {
-    padding: 3px 6px;
-    font-size: 0.7rem;
-    margin-left: var(--spacing-1);
-    min-width: 45px;
-    height: 30px;
+    padding: var(--spacing-2) var(--spacing-2) !important;
+    font-size: 0.85rem;
+    margin: 0 2px;
   }
 }
 

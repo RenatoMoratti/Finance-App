@@ -8,12 +8,11 @@ Aplicativo Flask para consolidar contas e transações via Open Finance usando a
 2. Clonar o repositório
 3. Criar contas Pluggy (meu.pluggy.ai e dashboard.pluggy.ai)
 4. Conectar instituições (dentro do trial de 14 dias)
-5. Criar `.env` e inserir credenciais
-6. Gerar `FLASK_SECRET_KEY`
-7. Escolher ambiente (dev/prod)
-8. Instalar dependências
-9. Rodar aplicação
-10. (Opcional) Reset / manutenção
+5. Criar ambiente virtual Python
+6. Instalar dependências
+7. Executar aplicação
+8. Configurar credenciais na interface web
+9. (Opcional) Alternar entre ambientes PROD/DEV
 
 ---
 ## 1. Requisitos
@@ -63,47 +62,7 @@ Importante (Trial 14 dias):
 - Crie todas as conexões com as contas durante o periodo de 14 dias
 
 ---
-## 5. Criar o Arquivo .env
-Copie o arquivo `.env.example` e renomeie para `.env` na raiz do projeto:
-```
-copy .env.example .env
-```
-
----
-## 6. Gerar e Definir FLASK_SECRET_KEY
-Gera uma chave segura para sessão Flask.
-A chave assina cookies de sessão (integridade). Em produção deve ser forte e privada.
-```
-python generate_secret_key.py
-```
-Copie o valor e preencha em `FLASK_SECRET_KEY=` no `.env`.
-
----
-## 7. Inserir Credenciais Pluggy
-Preencha no `.env` os valores obtidos no dashboard:
-```
-PLUGGY_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-PLUGGY_CLIENT_SECRET=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-Não coloque aspas.
-
----
-## 8. (Opcional) Ajustar Ambiente e Banco
-`APP_ENV` controla qual banco SQLite será usado:
-- `development` => `data/finance_app_dev.db`
-- `production`  => `data/finance_app_prod.db`
-
-```
-APP_ENV=development
-```
-
-(OPCIONAL) -> Caso deseja alterar o caminho do banco de dados, descomente em `.env`:
-```
-# DATABASE_PATH=data/meu_banco_custom.db
-```
-
----
-## 9. Criar e Ativar Ambiente Virtual (Recomendado)
+## 5. Criar e Ativar Ambiente Virtual (Recomendado)
 Windows PowerShell:
 ```
 python -m venv venv
@@ -113,13 +72,13 @@ venv\Scripts\Activate.ps1
 ```
 
 ---
-## 10. Instalar Dependências
+## 6. Instalar Dependências
 ```
 pip install -r requirements.txt
 ```
 
 ---
-## 11. Executar a Aplicação
+## 7. Executar a Aplicação
 ```
 python app.py
 ```
@@ -128,18 +87,43 @@ Acesse: `http://localhost:5000`
 Primeiro acesso criará automaticamente o banco referente ao ambiente.
 
 ---
-## 12. Verificar Banco de Dados
-- Dev: `data/finance_app_dev.db`
-- Prod: `data/finance_app_prod.db`
+## 8. Configurar Credenciais na Interface Web
+Após executar a aplicação, configure as credenciais através da interface:
 
-(OPCIONAL) -> Caso deseje resetar o banco de dados (DEV), remova o arquivo do banco:
-```
-Remove-Item data\finance_app_dev.db
-```
-Depois rode novamente `python app.py`.
+### 8.1. Acessar Configurações
+1. Na aplicação web, clique no ícone **⚙️ Configurações** na barra de navegação
+2. Ou acesse diretamente: `http://localhost:5000/settings`
+
+### 8.2. Preencher Credenciais Obrigatórias
+Preencha todos os campos necessários:
+
+**FLASK_SECRET_KEY:**
+- Chave secreta para criptografia Flask
+- Clique no botão **"Gerar Flask Secret Key"** para criar uma automaticamente
+- Ou insira uma string aleatória com pelo menos 32 caracteres
+
+**PLUGGY_CLIENT_ID:**
+- ID do cliente obtido no painel: `https://dashboard.pluggy.ai`
+- Formato: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+
+**PLUGGY_CLIENT_SECRET:**
+- Chave secreta obtida no painel: `https://dashboard.pluggy.ai`
+- Formato: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+
+### 8.3. Salvar Configurações
+- Clique em **"Salvar Configurações"**
+- As credenciais serão armazenadas com segurança em formato JSON
+- ✅ Configurações salvas com sucesso!
+
+### 8.4. Alternar Entre Ambientes (PROD/DEV)
+- Use o botão **DEV/PROD** no canto superior direito da navbar
+- **DEV**: Ambiente de desenvolvimento (`data/finance_app_dev.db`)
+- **PROD**: Ambiente de produção (`data/finance_app_prod.db`)
+- Cada ambiente mantém credenciais e dados separados
+- Confirme a mudança quando solicitado
 
 ---
-## 13. Como Funciona a Sincronização
+## 9. Como Funciona a Sincronização
 O app usa o `PLUGGY_CLIENT_ID` e `PLUGGY_CLIENT_SECRET` para obter token temporário e então:
 - Lista conexões criadas em `meu.pluggy.ai`
 - Sincroniza contas, saldos e transações
@@ -150,21 +134,24 @@ A sincronização será feita através do meu.pluggy.ai. Realize o login em sua 
 Após o trial: apenas sincronização das conexões já existentes continua possível (não cria novas).
 
 ---
-## 14. Estrutura do Projeto (Referência)
-```
-app.py                # Entrypoint Flask
-finance_app.py        # Sincronização Pluggy
-database.py           # Persistência SQLite
-oauth_manager.py      # Gerenciamento de conexões OAuth (se aplicável)
-config.py             # Config e seleção de ambiente
-generate_secret_key.py# Utilitário geração chave
-data/                 # Bancos SQLite
-templates/            # HTML (Jinja2)
-static/               # CSS / JS
-```
+## 10. FAQ Rápido
+**❓ Autenticação falhou:**
+- Valide `Client ID` / `Client Secret` nas Configurações
+- Verifique se as credenciais estão corretas no dashboard.pluggy.ai
 
----
-## 15. FAQ Rápido
-- Autenticação falhou: valide `Client ID` / `Client Secret` e se token não expirou.
-- Sem novas transações: verifique se a conexão ainda é válida no `meu.pluggy.ai`.
+**❓ Sem novas transações:**
+- Verifique se a conexão ainda é válida no `meu.pluggy.ai`
+- Sincronize novamente através da interface
+
+**❓ Perdeu as configurações:**
+- Acesse `/settings` para reconfigurar credenciais
+- Use o botão "Gerar Flask Secret Key" para nova chave
+
+**❓ Dados diferentes entre ambientes:**
+- DEV e PROD têm bancos e credenciais separados
+- Use o botão DEV/PROD na navbar para alternar
+
+**❓ Como resetar dados:**
+- DEV: Remove `data/finance_app_dev.db` e `data/app_settings_dev.json`
+- PROD: Remove `data/finance_app_prod.db` e `data/app_settings_prod.json`
 ---
