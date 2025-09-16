@@ -674,7 +674,7 @@ class Database:
                                              user_category: List[str] = None, user_subcategory: List[str] = None,
                                              modification_start_date: str = None, 
                                              modification_end_date: str = None,
-                                             verification_filter: List[str] = None) -> List[Dict]:
+                                             verification_filter: List[str] = None, type_filter: List[str] = None) -> List[Dict]:
         """Obt├⌐m transa├º├╡es com informa├º├╡es da conex├úo e conta, incluindo filtro por data de modifica├º├úo"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -787,6 +787,17 @@ class Database:
                         conditions.append('(t.verified = 0 OR t.verified IS NULL)')
                     elif status == 'with_conflicts':
                         conditions.append('t.conflict_detected = 1')
+                
+                if conditions:
+                    query += f' AND ({" OR ".join(conditions)})'
+            
+            if type_filter and len(type_filter) > 0:
+                # Filtro múltiplo para tipo de transação
+                conditions = []
+                for trans_type in type_filter:
+                    if trans_type in ['CREDIT', 'DEBIT']:
+                        conditions.append('t.type = ?')
+                        params.append(trans_type)
                 
                 if conditions:
                     query += f' AND ({" OR ".join(conditions)})'

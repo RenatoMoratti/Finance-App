@@ -274,6 +274,7 @@ def transactions():
         modification_start_date = request.args.get('modification_start_date')
         modification_end_date = request.args.get('modification_end_date')
         verification_filter = request.args.getlist('verification_filter')  # Lista de status
+        type_filter = request.args.getlist('type_filter')  # Lista de tipos de transação
         limit = int(request.args.get('limit', 100))
 
         # Busca transações com informações de conexão
@@ -288,7 +289,8 @@ def transactions():
             user_subcategory=user_subcategory if user_subcategory else None,
             modification_start_date=modification_start_date,
             modification_end_date=modification_end_date,
-            verification_filter=verification_filter if verification_filter else None
+            verification_filter=verification_filter if verification_filter else None,
+            type_filter=type_filter if type_filter else None
         )
 
         # Dados auxiliares para filtros e exibição
@@ -326,6 +328,7 @@ def transactions():
                 'modification_start_date': modification_start_date,
                 'modification_end_date': modification_end_date,
                 'verification_filter': verification_filter,
+                'type_filter': type_filter,
                 'limit': limit,
             },
         )
