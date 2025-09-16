@@ -163,10 +163,12 @@ body::before {
 .modern-navbar .navbar-nav .nav-link {
   color: rgba(255, 255, 255, 0.9) !important;
   font-weight: 500;
-  padding: var(--spacing-2) var(--spacing-4) !important;
+  padding: var(--spacing-2) var(--spacing-3) !important;
   border-radius: var(--border-radius-base);
   transition: var(--transition-base);
   margin: 0 var(--spacing-1);
+  white-space: nowrap;
+  font-size: 0.9rem;
 }
 
 .modern-navbar .navbar-nav .nav-link:hover {
@@ -185,9 +187,11 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: var(--white) !important;
   font-weight: 500;
-  padding: var(--spacing-2) var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-3);
   border-radius: var(--border-radius-base);
   transition: var(--transition-base);
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .sync-btn:hover {
@@ -195,6 +199,65 @@ body::before {
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+/* Botão de ambiente - igual aos nav-links */
+.environment-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500;
+  padding: var(--spacing-2) var(--spacing-3) !important;
+  border-radius: var(--border-radius-base);
+  transition: var(--transition-base);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  margin: 0 var(--spacing-1);
+  min-width: auto;
+  opacity: 1;
+  display: inline-block;
+  text-align: center;
+}
+
+.environment-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--white) !important;
+  transform: translateY(-1px);
+}
+
+.environment-btn.production {
+  background: rgba(21, 128, 61, 0.1);
+  border-color: rgba(21, 128, 61, 0.2);
+  color: rgba(21, 128, 61, 0.9) !important;
+}
+
+.environment-btn.production:hover {
+  background: rgba(21, 128, 61, 0.2);
+  border-color: rgba(21, 128, 61, 0.4);
+  color: rgba(21, 128, 61, 1) !important;
+}
+
+/* Navbar em ambiente DEV - cor diferenciada */
+.modern-navbar.dev-environment {
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%) !important;
+}
+
+.modern-navbar.dev-environment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706, #fbbf24);
+  background-size: 200% 100%;
+  animation: devIndicator 3s linear infinite;
+}
+
+@keyframes devIndicator {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* Modern Cards */
@@ -797,6 +860,31 @@ tr.modern-table-row-verified.modern-table-row-ignored td * {
   
   .modern-navbar .navbar-nav {
     gap: var(--spacing-2);
+  }
+}
+
+/* Melhorias na navbar para evitar quebras de linha */
+@media (min-width: 992px) {
+  .modern-navbar .container-fluid {
+    max-width: 1400px;
+  }
+  
+  .modern-navbar .navbar-nav .nav-link {
+    padding: var(--spacing-2) var(--spacing-2) !important;
+    margin: 0 2px;
+    font-size: 0.85rem;
+  }
+  
+  .sync-btn {
+    padding: var(--spacing-2) var(--spacing-2);
+    font-size: 0.85rem;
+    margin-left: var(--spacing-1);
+  }
+  
+  .environment-btn {
+    padding: var(--spacing-2) var(--spacing-2) !important;
+    font-size: 0.85rem;
+    margin: 0 2px;
   }
 }
 

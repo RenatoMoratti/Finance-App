@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-cog text-primary"></i> Configurações do Sistema</h2>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            <i class="fas {{ 'fa-exclamation-triangle' if category == 'error' else 'fa-check-circle' }}"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-key"></i> Chaves de API e Configurações</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="settings-form">
+                        <!-- Flask Secret Key -->
+                        <div class="mb-3">
+                            <label for="flask_secret_key" class="form-label fw-bold">
+                                <i class="fas fa-shield-alt text-primary"></i> Flask Secret Key *
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="flask_secret_key" 
+                                    name="flask_secret_key" 
+                                    value="{{ config.flask_secret_key or '' }}" 
+                                    required
+                                    placeholder="Chave secreta para criptografia Flask"
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    data-target="flask_secret_key"
+                                    title="Mostrar/Ocultar chave"
+                                >
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Chave secreta usada para criptografia de sessões Flask. Deve ser uma string aleatória segura.
+                            </div>
+                        </div>
+
+                        <!-- Pluggy Client ID -->
+                        <div class="mb-3">
+                            <label for="pluggy_client_id" class="form-label fw-bold">
+                                <i class="fas fa-id-card text-info"></i> Pluggy Client ID *
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="pluggy_client_id" 
+                                    name="pluggy_client_id" 
+                                    value="{{ config.pluggy_client_id or '' }}" 
+                                    required
+                                    placeholder="ID do cliente Pluggy"
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    data-target="pluggy_client_id"
+                                    title="Mostrar/Ocultar ID"
+                                >
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Identificador único do seu cliente na API Pluggy.
+                            </div>
+                        </div>
+
+                        <!-- Pluggy Client Secret -->
+                        <div class="mb-4">
+                            <label for="pluggy_client_secret" class="form-label fw-bold">
+                                <i class="fas fa-lock text-warning"></i> Pluggy Client Secret *
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="pluggy_client_secret" 
+                                    name="pluggy_client_secret" 
+                                    value="{{ config.pluggy_client_secret or '' }}" 
+                                    required
+                                    placeholder="Chave secreta do cliente Pluggy"
+                                >
+                                <button 
+                                    class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    data-target="pluggy_client_secret"
+                                    title="Mostrar/Ocultar chave"
+                                >
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Chave secreta para autenticação na API Pluggy. Mantenha esta informação segura.
+                            </div>
+                        </div>
+
+                        <!-- Status das Configurações -->
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <div>
+                                <strong>Status:</strong> 
+                                {% if config_valid %}
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle"></i> Todas as configurações obrigatórias estão preenchidas
+                                    </span>
+                                {% else %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        Campos obrigatórios pendentes: {{ missing_fields|join(', ') }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Salvar Configurações
+                                </button>
+                                <button type="button" class="btn btn-secondary ms-2" onclick="window.location.reload()">
+                                    <i class="fas fa-undo"></i> Cancelar
+                                </button>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-info" id="generate-secret-btn">
+                                    <i class="fas fa-random"></i> Gerar Flask Secret Key
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informações de Segurança -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Informações de Segurança</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-shield-alt text-primary"></i> Flask Secret Key</h6>
+                            <ul class="small">
+                                <li>Use uma string aleatória com pelo menos 32 caracteres</li>
+                                <li>Mantenha esta chave confidencial e segura</li>
+                                <li>Alterá-la invalidará todas as sessões ativas</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-plug text-info"></i> Credenciais Pluggy</h6>
+                            <ul class="small">
+                                <li>Obtidas no painel de desenvolvedores Pluggy</li>
+                                <li>Necessárias para sincronização bancária</li>
+                                <li>Não compartilhe estas informações</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funcionalidade de mostrar/ocultar senhas
+    document.querySelectorAll('.toggle-password').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                this.title = 'Ocultar';
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                this.title = 'Mostrar';
+            }
+        });
+    });
+
+    // Gerar Flask Secret Key automaticamente
+    document.getElementById('generate-secret-btn').addEventListener('click', function() {
+        // Gera uma chave secreta aleatória de 64 caracteres
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+        let result = '';
+        for (let i = 0; i < 64; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        document.getElementById('flask_secret_key').value = result;
+        
+        // Mostra um alerta de sucesso temporário
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-success alert-dismissible fade show mt-2';
+        alert.innerHTML = `
+            <i class="fas fa-check-circle"></i> Flask Secret Key gerada automaticamente!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const form = document.getElementById('settings-form');
+        form.parentNode.insertBefore(alert, form);
+        
+        // Remove o alerta após 3 segundos
+        setTimeout(function() {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 3000);
+    });
+
+    // Validação do formulário
+    document.getElementById('settings-form').addEventListener('submit', function(e) {
+        const requiredFields = ['flask_secret_key', 'pluggy_client_id', 'pluggy_client_secret'];
+        let hasEmptyFields = false;
+        
+        requiredFields.forEach(function(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                hasEmptyFields = true;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (hasEmptyFields) {
+            e.preventDefault();
+            alert('Todos os campos obrigatórios devem ser preenchidos!');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -87,8 +87,8 @@
     </div>
 
     <!-- Modern Navigation -->
-    <nav class="navbar navbar-expand-lg modern-navbar">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg modern-navbar {{ 'dev-environment' if not environment_info.is_production }}">
+        <div class="container-fluid px-4">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-chart-line"></i>
                 Finance App
@@ -149,6 +149,18 @@
                         <button class="sync-btn" onclick="modernSyncAccount()">
                             <i class="fas fa-sync-alt"></i>
                             Sincronizar
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'settings_page' }}" href="{{ url_for('settings_page') }}">
+                            <i class="fas fa-cog"></i>
+                            Configurações
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="environment-btn" onclick="switchEnvironment()" title="Alternar ambiente entre PROD e DEV">
+                            <i class="fas {{ 'fa-server' if environment_info.is_production else 'fa-code' }}"></i>
+                            {{ environment_info.environment_display }}
                         </button>
                     </li>
                 </ul>
@@ -288,6 +300,78 @@
                     }
                 });
             });
+        });
+        
+        // Função para alternar ambiente
+        function switchEnvironment() {
+            const currentEnv = '{{ environment_info.environment_display }}';
+            const targetEnv = currentEnv === 'PRODUCTION' ? 'DEV' : 'PROD';
+            
+            const confirmMessage = `Deseja alterar o ambiente de ${currentEnv} para ${targetEnv}?\n\nIsto irá:\n• Alterar o banco de dados usado\n• Alterar as configurações de credenciais\n• Recarregar a aplicação`;
+            
+            if (confirm(confirmMessage)) {
+                // Mostra loading
+                const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+                const loadingText = document.querySelector('#loadingModal .modal-body h5');
+                if (loadingText) {
+                    loadingText.innerHTML = `<i class="fas fa-exchange-alt fa-spin me-2"></i>Alternando para ambiente ${targetEnv}...`;
+                }
+                modal.show();
+                
+                // Faz a requisição
+                fetch('/api/environment/switch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    modal.hide();
+                    if (data.success) {
+                        if (window.modernFinanceApp) {
+                            window.modernFinanceApp.showNotification(
+                                `✅ ${data.message}`, 
+                                'success', 
+                                3000
+                            );
+                        } else {
+                            alert(`✅ ${data.message}`);
+                        }
+                        
+                        // Recarrega a página após 1.5 segundos
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        if (window.modernFinanceApp) {
+                            window.modernFinanceApp.showNotification(
+                                `❌ Erro: ${data.message}`, 
+                                'error'
+                            );
+                        } else {
+                            alert(`❌ Erro: ${data.message}`);
+                        }
+                    }
+                })
+                .catch(error => {
+                    modal.hide();
+                    const errorMessage = `❌ Erro ao alternar ambiente: ${error}`;
+                    if (window.modernFinanceApp) {
+                        window.modernFinanceApp.showNotification(errorMessage, 'error');
+                    } else {
+                        alert(errorMessage);
+                    }
+                });
+            }
+        }
+        
+        // Atualiza o estilo do botão baseado no ambiente atual
+        document.addEventListener('DOMContentLoaded', function() {
+            const envBtn = document.querySelector('.environment-btn');
+            if (envBtn && '{{ environment_info.is_production }}' === 'True') {
+                envBtn.classList.add('production');
+            }
         });
     </script>
     
