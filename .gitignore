@@ -138,3 +138,7 @@ data/*_config.json
 *.pem
 secrets/
 credentials/
+backups/
+backups/**
+*/backups/**
+data_snapshot_*.zip

@@ -26,6 +26,7 @@ from oauth_manager import OAuthManager
 from config import Config
 from settings_manager import settings_manager
 from environment_manager import environment_manager
+from backup_manager import perform_backup, start_periodic_backups
 
 app = Flask(__name__)
 app.secret_key = Config.FLASK_SECRET_KEY
@@ -99,9 +100,19 @@ app.jinja_env.filters['currency_br'] = format_currency_br
 app.jinja_env.filters['number_br'] = format_number_br
 app.jinja_env.filters['integer_br'] = format_integer_br
 
-# Inicializa banco de dados e OAuth
+# Inicializa banco de dados, OAuth e executa backup inicial
 db = Database()
 oauth_manager = OAuthManager()
+
+try:
+    current_env = environment_manager.get_current_environment()
+    db_path = Config.get_database_path()
+    created, detail = perform_backup(db_path, current_env, force=False, max_hours=24)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Backup startup: criado={created} detalhe={detail}")
+    # Inicia backups periódicos a cada 6h para garantir janela <24h mesmo com app aberto por longos períodos
+    start_periodic_backups(db_path, current_env, interval_hours=6)
+except Exception as e:
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Erro ao executar rotina de backup inicial: {e}")
 
 @app.route('/')
 def index():
