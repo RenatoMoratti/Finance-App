@@ -611,6 +611,33 @@ def accounts():
         flash(f'Erro ao carregar contas: {e}', 'error')
         return render_template('accounts.html', accounts=[], account_types=[])
 
+@app.route('/accounts/<account_id>/rename', methods=['POST'])
+def rename_account(account_id):
+    """Atualiza somente o nome customizado de uma conta (sem alterar nome original de sincronização)"""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        new_name = data.get('custom_name', '').strip()
+        if new_name == '':
+            # Permitir limpar (remove custom_name)
+            new_name = None
+        import sqlite3
+        conn = sqlite3.connect(db.db_path)
+        cur = conn.cursor()
+        # Garante coluna
+        try:
+            cur.execute('ALTER TABLE accounts ADD COLUMN custom_name TEXT')
+        except Exception:
+            pass
+        if new_name is None:
+            cur.execute('UPDATE accounts SET custom_name = NULL, modification_date = ? WHERE id = ?', (datetime.now().isoformat(), account_id))
+        else:
+            cur.execute('UPDATE accounts SET custom_name = ?, modification_date = ? WHERE id = ?', (new_name, datetime.now().isoformat(), account_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Nome personalizado atualizado', 'custom_name': new_name})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erro ao atualizar nome: {e}'})
+
 @app.route('/accounts/create', methods=['GET', 'POST'])
 def create_account():
     """Criar nova conta manual"""
