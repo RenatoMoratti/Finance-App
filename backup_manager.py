@@ -8,10 +8,14 @@ RETENTION_DAYS = 30
 BACKUP_ROOT_NAME = "backups"
 
 CONFIG_FILES = [
-    "data/app_settings.json",
+    # Arquivos de configuração por ambiente
     "data/app_settings_prod.json",
     "data/app_settings_dev.json",
+    # Conexões OAuth legadas e por ambiente (inclui legada para migração)
     "data/oauth_connections.json",
+    "data/oauth_connections_prod.json",
+    "data/oauth_connections_dev.json",
+    # Arquivo de ambiente
     "data/app_environment.json"
 ]
 

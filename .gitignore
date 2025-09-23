@@ -5,6 +5,8 @@ __pycache__/
 *.db
 data/*.db
 data/oauth_connections.json
+data/oauth_connections_dev.json
+data/oauth_connections_prod.json
 data/app_settings.json
 .env
 .env.local

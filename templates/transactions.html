@@ -410,6 +410,7 @@
                             <th class="text-center modern-table-cell-icon">
                                 <span class="modern-table-header-text">Origem</span>
                             </th>
+                            <th class="text-center modern-table-cell-weekday" style="width:50px;">Dia</th>
                             <th class="text-center sortable modern-table-cell-date" data-column="date" style="cursor: pointer;">
                                 <div class="modern-table-header-sortable">
                                     <span>Data</span>
@@ -464,10 +465,10 @@
                                     <i class="fas fa-sort text-muted"></i>
                                 </div>
                             </th>
-                            <th class="text-center" style="width: 90px;">
+                            <th class="text-center" style="width: 80px;">
                                 % {{ division_names.user1_name if division_names and division_names.user1_name else 'Usuário 1' }}
                             </th>
-                            <th class="text-center" style="width: 90px;">
+                            <th class="text-center" style="width: 80px;">
                                 % {{ division_names.user2_name if division_names and division_names.user2_name else 'Usuário 2' }}
                             </th>
                             <th class="modern-table-cell-actions">Ações</th>
@@ -503,12 +504,15 @@
                                     {% endif %}
                                 </div>
                             </td>
+                            <td class="text-center modern-table-cell" style="white-space:nowrap; font-size:0.70rem;">
+                                {{ transaction.weekday or '' }}
+                            </td>
                             <td class="text-center modern-table-cell">
                                 <div class="modern-transaction-date" style="white-space:nowrap;">
                                     {{ transaction.date_only or (transaction.transaction_date[:10] if transaction.transaction_date else 'N/A') }}
                                     {% set time_val = transaction.time_only or (transaction.transaction_date[11:19] if transaction.transaction_date and transaction.transaction_date|length > 10 else '') %}
                                     {% if time_val %}
-                                        &nbsp;<span class="modern-date-time">{{ time_val }}</span>
+                                        &nbsp;<span class="modern-date-time" style="font-size:0.60rem;">{{ time_val }}</span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -520,7 +524,13 @@
                             <td class="modern-table-cell">
                                 <div class="modern-account-info">
                                     <i class="fas fa-university"></i>
-                                    <span>{{ transaction.account_full_name or transaction.account_name }}</span>
+                                    <span>
+                                        {% if transaction.account_custom_name %}
+                                            {{ transaction.account_custom_name }}
+                                        {% else %}
+                                            {{ transaction.account_name or transaction.account_full_name }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                             </td>
                             <td class="modern-table-cell">
@@ -569,7 +579,7 @@
                                     {% if transaction.modification_date %}
                                         {{ transaction.modification_date[:10] }}
                                         {% if transaction.modification_date|length > 10 %}
-                                            &nbsp;<span class="modern-date-time">{{ transaction.modification_date[11:19] }}</span>
+                                            &nbsp;<span class="modern-date-time" style="font-size:0.60rem;">{{ transaction.modification_date[11:19] }}</span>
                                         {% endif %}
                                     {% else %}
                                         <span class="text-muted">N/A</span>
@@ -606,7 +616,7 @@
                                     <label for="ignore_{{ transaction.id }}" class="modern-checkbox-label"></label>
                                 </div>
                             </td>
-                            <td class="text-center modern-table-cell" style="width: 110px;">
+                            <td class="text-center modern-table-cell" style="width: 80px;">
                                 <div class="input-group input-group-sm">
                                     <input type="number" class="form-control form-control-sm tx-split-u1" min="0" max="100" step="10" style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;" 
                                            data-transaction-id="{{ transaction.id }}"
@@ -616,7 +626,7 @@
                                     </button>
                                 </div>
                             </td>
-                            <td class="text-center modern-table-cell" style="width: 110px;">
+                            <td class="text-center modern-table-cell" style="width: 80px;">
                                 <div class="input-group input-group-sm">
                                     <input type="number" class="form-control form-control-sm tx-split-u2" min="0" max="100" step="10" readonly style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;"
                                            data-transaction-id="{{ transaction.id }}"
@@ -626,7 +636,7 @@
                                     </button>
                                 </div>
                             </td>
-                            <td class="modern-table-cell">
+                            <td class="modern-table-cell modern-table-cell-actions" style="width:60px;">
                                 <div class="modern-action-buttons">
                                     <a href="{{ url_for('edit_transaction', transaction_id=transaction.id) }}" 
                                        class="modern-btn modern-btn-sm modern-btn-primary" 
@@ -1657,17 +1667,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         function getColumnIndex(column) {
+            // Índices atualizados após inserção da coluna 'Dia' logo após 'Origem'.
+            // Cabeçalhos atuais (0-based): 0 Origem, 1 Dia, 2 Data, 3 Descrição, 4 Conta, 5 Categoria, 6 Subcategoria, 7 Valor, 8 Modificação, 9 Verif., 10 Ignorar, 11 %U1, 12 %U2, 13 Ações
             switch (column) {
-                case 'date': return 1;  // +1 devido à nova coluna Origem
-                case 'description': return 2;
-                case 'account': return 3;
-                case 'connection': return 4;
-                case 'category': return 5;
-                case 'amount': return 6;
-                case 'modification_date': return 7;
-                case 'verified': return 8;
-                case 'ignored': return 9;
-                default: return 1;
+                case 'date': return 2;              // Data
+                case 'description': return 3;       // Descrição
+                case 'account': return 4;           // Conta
+                case 'user_category': return 5;     // Categoria (usuário)
+                case 'user_subcategory': return 6;  // Subcategoria (usuário)
+                case 'amount': return 7;            // Valor
+                case 'modification_date': return 8; // Modificação
+                case 'verified': return 9;          // Verif.
+                case 'ignored': return 10;          // Ignorar
+                default: return 2;
             }
         }
         
@@ -2725,6 +2737,78 @@ document.addEventListener('DOMContentLoaded', function() {
         container.appendChild(div);
         setTimeout(()=>{ if(div.parentNode) div.parentNode.removeChild(div); }, 12000);
     }
+    
+    // Funcionalidade para cabeçalho fixo da tabela
+    function initializeFixedTableHeader() {
+        const tableContainer = document.querySelector('.modern-table-container');
+        const tableHead = document.querySelector('.modern-table thead');
+        
+        if (!tableContainer || !tableHead) return;
+        
+        // Função para verificar scroll horizontal
+        function checkHorizontalScroll() {
+            const hasHorizontalScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
+            if (hasHorizontalScroll) {
+                tableContainer.classList.add('has-horizontal-scroll');
+            } else {
+                tableContainer.classList.remove('has-horizontal-scroll');
+            }
+        }
+        
+        // Verificar scroll horizontal no carregamento e redimensionamento
+        checkHorizontalScroll();
+        window.addEventListener('resize', checkHorizontalScroll);
+        
+        // Adicionar classe para sombra dinâmica no cabeçalho
+        tableContainer.addEventListener('scroll', function() {
+            const scrollTop = this.scrollTop;
+            
+            if (scrollTop > 5) {
+                tableHead.classList.add('scrolled');
+            } else {
+                tableHead.classList.remove('scrolled');
+            }
+        });
+        
+        // Scroll suave para o topo da tabela
+        const scrollToTopBtn = document.createElement('button');
+        scrollToTopBtn.className = 'btn btn-primary btn-sm position-fixed';
+        scrollToTopBtn.style.cssText = `
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        `;
+        scrollToTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        scrollToTopBtn.title = 'Voltar ao topo da tabela';
+        document.body.appendChild(scrollToTopBtn);
+        
+        // Mostrar/ocultar botão de voltar ao topo
+        tableContainer.addEventListener('scroll', function() {
+            const scrollTop = this.scrollTop;
+            
+            if (scrollTop > 200) {
+                scrollToTopBtn.style.display = 'block';
+            } else {
+                scrollToTopBtn.style.display = 'none';
+            }
+        });
+        
+        // Evento do botão voltar ao topo
+        scrollToTopBtn.addEventListener('click', function() {
+            tableContainer.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // Inicializar cabeçalho fixo
+    initializeFixedTableHeader();
 
 }); // <-- fecha o document.addEventListener('DOMContentLoaded', ... )
 

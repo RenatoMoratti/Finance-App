@@ -82,7 +82,19 @@
     <div class="account-card fade-in-up">
         <div class="account-header {% if account.is_manual %}account-manual{% else %}account-sync{% endif %}">
             <div class="account-info">
-                <h5 class="account-title">{{ account.name }}</h5>
+                <h5 class="account-title d-flex align-items-center gap-2" style="position:relative;">
+                    <span class="account-display-name" data-account-id="{{ account.id }}">{{ account.name }}</span>
+                    {% if not account.is_manual %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 rename-account-btn" 
+                            data-account-id="{{ account.id }}" data-current-name="{{ account.custom_name or '' }}" 
+                            title="Renomear exibição da conta" style="font-size:0.65rem;">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% endif %}
+                </h5>
+                {% if not account.is_manual and account.custom_name %}
+                <div class="text-muted" style="font-size:0.6rem; margin-top:-6px;">Original: {{ account.original_name }}</div>
+                {% endif %}
                 <div class="account-meta">
                     <span class="account-type">{{ account.type or 'N/A' }}</span>
                     {% if account.subtype %}
@@ -232,6 +244,36 @@
 {% endif %}
 
 <!-- Modal de Criação de Conta -->
+
+<!-- Modal Renomear Conta Sincronizada -->
+<div class="modal fade" id="renameAccountModal" tabindex="-1" aria-labelledby="renameAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="renameAccountModalLabel"><i class="fas fa-edit me-2"></i>Renomear Conta (Exibição)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="renameAccountForm">
+                    <input type="hidden" id="rename_account_id" name="account_id">
+                    <div class="mb-3">
+                        <label class="form-label">Nome Original</label>
+                        <input type="text" class="form-control" id="rename_original_name" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nome Personalizado (opcional)</label>
+                        <input type="text" class="form-control" id="rename_custom_name" maxlength="80" placeholder="Ex: Conta Principal" />
+                        <small class="text-muted">Deixe em branco para voltar ao nome original da sincronização.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveRenameBtn"><i class="fas fa-save me-1"></i>Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="createAccountModal" tabindex="-1" aria-labelledby="createAccountModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -379,6 +421,62 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Renomear conta sincronizada
+    const renameModalEl = document.getElementById('renameAccountModal');
+    let renameModal = null;
+    if (renameModalEl) { renameModal = new bootstrap.Modal(renameModalEl); }
+
+    document.querySelectorAll('.rename-account-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const accountId = btn.dataset.accountId;
+            const currentDisplay = btn.dataset.currentName || '';
+            const card = btn.closest('.account-card');
+            const originalName = card ? card.querySelector('.account-display-name').textContent.trim() : '';
+            document.getElementById('rename_account_id').value = accountId;
+            document.getElementById('rename_original_name').value = originalName;
+            document.getElementById('rename_custom_name').value = currentDisplay;
+            renameModal.show();
+        });
+    });
+
+    document.getElementById('saveRenameBtn')?.addEventListener('click', () => {
+        const accountId = document.getElementById('rename_account_id').value;
+        const customName = document.getElementById('rename_custom_name').value.trim();
+        fetch(`/accounts/${accountId}/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ custom_name: customName })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Atualiza o texto visível
+                const span = document.querySelector(`.account-display-name[data-account-id="${accountId}"]`);
+                if (span) { span.textContent = data.custom_name || document.getElementById('rename_original_name').value; }
+                // Adiciona/Remove linha de original
+                const card = span.closest('.account-card');
+                if (card) {
+                    let origLine = card.querySelector('.text-muted');
+                    if (data.custom_name) {
+                        if (!origLine || !origLine.textContent.startsWith('Original:')) {
+                            const info = document.createElement('div');
+                            info.className = 'text-muted';
+                            info.style.fontSize = '0.6rem';
+                            info.style.marginTop = '-6px';
+                            info.textContent = 'Original: ' + document.getElementById('rename_original_name').value;
+                            span.parentElement.insertAdjacentElement('afterend', info);
+                        }
+                    } else if (origLine && origLine.textContent.startsWith('Original:')) {
+                        origLine.remove();
+                    }
+                }
+                renameModal.hide();
+            } else {
+                alert(data.message || 'Erro ao salvar');
+            }
+        })
+        .catch(err => { console.error(err); alert('Falha na requisição'); });
+    });
     // Função para formatar valor para moeda brasileira
     function formatCurrencyBR(value) {
         if (!value) return '0,00';

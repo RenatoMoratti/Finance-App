@@ -563,9 +563,15 @@ class Database:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
+
+            # Garante coluna custom_name (migração leve) – ignora erro se já existir
+            try:
+                cursor.execute('ALTER TABLE accounts ADD COLUMN custom_name TEXT')
+            except Exception:
+                pass
             
             cursor.execute('''
-                SELECT id, name, type, subtype, balance, currency_code, last_updated, 
+                SELECT id, name, COALESCE(custom_name, '') as custom_name, type, subtype, balance, currency_code, last_updated, 
                        creation_date, modification_date, connection_name, item_id
                 FROM accounts 
                 ORDER BY 
@@ -576,20 +582,24 @@ class Database:
             accounts = []
             for row in cursor.fetchall():
                 # Determinar se é conta manual ou de conexão
-                is_manual = row[9] is None or row[9] == '' or row[10] is None or row[10] == ''
+                is_manual = row[10] is None or row[10] == '' or row[11] is None or row[11] == ''
+                orig_name = row[1]
+                custom_name = row[2]
                 
                 accounts.append({
                     'id': row[0],
-                    'name': row[1],
-                    'type': row[2],
-                    'subtype': row[3],
-                    'balance': row[4],
-                    'currency_code': row[5],
-                    'last_updated': row[6],
-                    'creation_date': row[7],
-                    'modification_date': row[8],
-                    'connection_name': row[9],
-                    'item_id': row[10],
+                    'name': custom_name if custom_name else orig_name,
+                    'original_name': orig_name,
+                    'custom_name': custom_name,
+                    'type': row[3],
+                    'subtype': row[4],
+                    'balance': row[5],
+                    'currency_code': row[6],
+                    'last_updated': row[7],
+                    'creation_date': row[8],
+                    'modification_date': row[9],
+                    'connection_name': row[10],
+                    'item_id': row[11],
                     'is_manual': is_manual,
                     'source_type': 'Manual' if is_manual else 'Conexão'
                 })
@@ -679,6 +689,12 @@ class Database:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
+
+            # Garante que a coluna custom_name exista (migração leve e idempotente)
+            try:
+                cursor.execute('ALTER TABLE accounts ADD COLUMN custom_name TEXT')
+            except sqlite3.OperationalError:
+                pass
             
             query = '''
                 SELECT 
@@ -687,6 +703,7 @@ class Database:
                     t.category, t.type, t.creation_date, t.modification_date,
                     t.connection_name as connection_name,
                     a.name as account_full_name,
+                    a.custom_name as account_custom_name,
                     date(t.transaction_date) as date_only,
                     time(t.transaction_date) as time_only,
                     COALESCE(t.verified, 0) as verified,
@@ -809,10 +826,28 @@ class Database:
 
             transactions = []
             for row in cursor.fetchall():
+                # row indices after adding account_custom_name:
+                # 0 id, 1 account_id, 2 original stored account_name, 3 amount, 4 description,
+                # 5 transaction_date, 6 category, 7 type, 8 creation_date, 9 modification_date,
+                # 10 connection_name, 11 account_full_name (a.name), 12 account_custom_name,
+                # 13 date_only, 14 time_only, 15 verified, 16 conflict_detected, 17 conflict_log,
+                # 18 ignorar_transacao, 19 manual_modification, 20 user_category, 21 user_subcategory,
+                # 22 user1_percent, 23 user2_percent
+                display_account_name = row[12] if row[12] else (row[11] or row[2])
+                # Calcula dia da semana (Seg, Ter, Qua, Qui, Sex, Sáb, Dom) baseado em date_only
+                weekday_label = ''
+                try:
+                    from datetime import datetime as _dt
+                    if row[13]:
+                        wd = _dt.strptime(row[13], '%Y-%m-%d').weekday()  # Monday=0
+                        weekday_map = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+                        weekday_label = weekday_map[wd]
+                except Exception:
+                    pass
                 transactions.append({
                     'id': row[0],
                     'account_id': row[1],
-                    'account_name': row[2],
+                    'account_name': display_account_name,
                     'amount': row[3],
                     'description': row[4],
                     'transaction_date': row[5],
@@ -822,17 +857,19 @@ class Database:
                     'modification_date': row[9],
                     'connection_name': row[10] or 'N/A',
                     'account_full_name': row[11] or row[2],
-                    'date_only': row[12],
-                    'time_only': row[13],
-                    'verified': row[14],
-                    'conflict_detected': row[15],
-                    'conflict_log': row[16] or '',
-                    'ignorar_transacao': row[17],
-                    'manual_modification': row[18],
-            'user_category': row[19],
-            'user_subcategory': row[20],
-            'user1_percent': row[21],
-            'user2_percent': row[22]
+                    'account_custom_name': row[12],
+                    'date_only': row[13],
+                    'time_only': row[14],
+                    'weekday': weekday_label,
+                    'verified': row[15],
+                    'conflict_detected': row[16],
+                    'conflict_log': row[17] or '',
+                    'ignorar_transacao': row[18],
+                    'manual_modification': row[19],
+                    'user_category': row[20],
+                    'user_subcategory': row[21],
+                    'user1_percent': row[22],
+                    'user2_percent': row[23]
                 })
 
             conn.close()
