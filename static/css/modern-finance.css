@@ -2487,3 +2487,34 @@ tr.modern-table-row-verified.modern-table-row-ignored td * {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ============================= */
+/* Ajustes 2025-09-23: Cabeçalho tabela + Filtros menores */
+/* ============================= */
+/* Cabeçalho mais escuro da tabela de transações */
+.modern-table thead, .modern-table thead th {
+  background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%) !important;
+}
+
+/* Redução de fonte dos filtros (labels, selects, multi-select) */
+.modern-filters-section .form-label,
+.modern-filters-section .form-label-sm { font-size: 0.65rem !important; font-weight:600; }
+
+.modern-filters-section .multi-select-display,
+.modern-filters-section .multi-select-option,
+.modern-filters-section .multi-select-option label,
+.modern-filters-section .multi-select-option input,
+.modern-filters-section .multi-select-placeholder,
+.modern-filters-section .form-control-sm,
+.modern-filters-section .form-select-sm {
+  font-size: 0.68rem !important;
+}
+
+/* Ajustar alturas para manter usabilidade */
+.modern-filters-section .multi-select-display { min-height: 32px; padding: 4px 8px; }
+.modern-filters-section .multi-select-option { padding: 4px 6px; }
+.modern-filters-section .form-control-sm,
+.modern-filters-section .form-select-sm { padding: 2px 4px; height: 30px; }
+
+/* Botões nos filtros levemente menores */
+.modern-filters-section .btn.btn-sm { font-size: 0.65rem; padding: 2px 6px; }
