@@ -1447,6 +1447,11 @@ def switch_environment():
             global settings_manager
             from settings_manager import SettingsManager
             settings_manager = SettingsManager()
+
+            # Reinicializa oauth_manager para apontar para o arquivo de conexões do novo ambiente
+            global oauth_manager
+            from oauth_manager import OAuthManager as _OM
+            oauth_manager = _OM()
             
             return jsonify({
                 'success': True,

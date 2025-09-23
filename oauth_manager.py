@@ -19,7 +19,14 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Tuple, List
 
 class OAuthManager:
-    def __init__(self, storage_file: str = "data/oauth_connections.json"):
+    def __init__(self, storage_file: str | None = None):
+        # Seleciona arquivo de acordo com ambiente atual se não fornecido
+        if storage_file is None:
+            try:
+                from environment_manager import environment_manager
+                storage_file = environment_manager.get_oauth_connections_file_path()
+            except Exception:
+                storage_file = "data/oauth_connections.json"
         self.storage_file = storage_file
         self.ensure_directory()
     

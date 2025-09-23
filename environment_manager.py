@@ -107,6 +107,36 @@ class EnvironmentManager:
             return "data/app_settings_prod.json"
         else:
             return "data/app_settings_dev.json"
+
+    def get_oauth_connections_file_path(self) -> str:
+        """Retorna o caminho do arquivo de conexões OAuth baseado no ambiente atual.
+
+        Mantém retrocompatibilidade: se o arquivo legado compartilhado existir e
+        o arquivo específico ainda não existir, faz uma cópia para o novo nome
+        para não perder conexões já existentes.
+        """
+        try:
+            env = self.get_current_environment().lower()
+            legacy_path = "data/oauth_connections.json"
+            if env == 'production':
+                target_path = "data/oauth_connections_prod.json"
+            else:
+                target_path = "data/oauth_connections_dev.json"
+
+            # Migração simples: copia conteúdo do legado para o novo se aplicável
+            if os.path.exists(legacy_path) and not os.path.exists(target_path):
+                try:
+                    with open(legacy_path, 'r', encoding='utf-8') as f_legacy:
+                        data = f_legacy.read()
+                    with open(target_path, 'w', encoding='utf-8') as f_new:
+                        f_new.write(data)
+                    print(f"🔁 Migração de conexões OAuth: {legacy_path} → {target_path}")
+                except Exception as e:
+                    print(f"⚠️ Falha ao migrar conexões OAuth: {e}")
+            return target_path
+        except Exception as e:
+            print(f"⚠️ Erro ao determinar arquivo de conexões OAuth: {e}")
+            return "data/oauth_connections.json"  # fallback legado
     
     def get_environment_info(self) -> Dict:
         """Retorna informações completas do ambiente atual"""
