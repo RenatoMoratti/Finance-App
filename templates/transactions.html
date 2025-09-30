@@ -297,26 +297,30 @@
                         </div>
                     </div>
                     
-                    <!-- Subcategory Filter -->
+                    <!-- Subcategory Filter REMOVIDO -->
+                    <!-- Description Filter -->
                     <div class="col-lg-2 col-md-3">
-                        <label for="user_subcategory" class="form-label form-label-sm">Subcategoria</label>
-                        <div class="multi-select-container" data-name="user_subcategory">
+                        <label class="form-label form-label-sm">Descrição</label>
+                        <div class="multi-select-container" data-name="description_filter" data-search="true" data-placeholder="Todas">
                             <div class="multi-select-display" data-placeholder="Todas">
                                 <span class="multi-select-placeholder">Todas</span>
                             </div>
                             <div class="multi-select-options">
                                 <div class="multi-select-option multi-select-select-all" data-action="select-all">
-                                    <input type="checkbox" id="subcategory_select_all">
-                                    <label for="subcategory_select_all">✓ Selecionar todas</label>
+                                    <input type="checkbox" id="desc_select_all">
+                                    <label for="desc_select_all">✓ Selecionar todas</label>
                                 </div>
-                                <div class="multi-select-option" data-value="__sem_subcategoria__">
-                                    <input type="checkbox" id="subcat_none" value="__sem_subcategoria__" name="user_subcategory" {% if '__sem_subcategoria__' in (filters.user_subcategory or []) %}checked{% endif %}>
-                                    <label for="subcat_none">Sem Subcategoria</label>
-                                </div>
-                                {% for subcat in user_subcategories|sort %}
-                                <div class="multi-select-option" data-value="{{ subcat }}">
-                                    <input type="checkbox" id="subcat_{{ subcat }}" value="{{ subcat }}" name="user_subcategory" {% if subcat in (filters.user_subcategory or []) %}checked{% endif %}>
-                                    <label for="subcat_{{ subcat }}">{{ subcat }}</label>
+                                {% set desc_values = [] %}
+                                {% for tx in (all_transactions or []) %}
+                                    {% if tx.description and tx.description not in desc_values %}
+                                        {% set _ = desc_values.append(tx.description) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for d in desc_values|sort %}
+                                <div class="multi-select-option" data-value="{{ d }}">
+                                    <input type="checkbox" id="desc_{{ loop.index }}" value="{{ d }}" name="description_filter" 
+                                           {% if filters.description_filter and (d in (filters.description_filter if filters.description_filter is iterable and filters.description_filter is not string else [filters.description_filter])) %}checked{% endif %}>
+                                    <label for="desc_{{ loop.index }}">{{ d }}</label>
                                 </div>
                                 {% endfor %}
                             </div>
@@ -435,13 +439,8 @@
                                     <i class="fas fa-sort text-muted"></i>
                                 </div>
                             </th>
-                            <th class="sortable modern-table-cell-subcategory" data-column="user_subcategory" style="cursor: pointer;">
-                                <div class="modern-table-header-sortable">
-                                    <span>Subcategoria</span>
-                                    <i class="fas fa-sort text-muted"></i>
-                                </div>
-                            </th>
-                            <th class="text-center sortable modern-table-cell-amount" data-column="amount" style="cursor: pointer;">
+                            <!-- Coluna Subcategoria REMOVIDA -->
+                            <th class="text-center sortable modern-table-cell-amount" data-column="amount" style="cursor: pointer; min-width:130px; width:130px;">
                                 <div class="modern-table-header-sortable">
                                     <span>Valor</span>
                                     <i class="fas fa-sort text-muted"></i>
@@ -465,10 +464,10 @@
                                     <i class="fas fa-sort text-muted"></i>
                                 </div>
                             </th>
-                            <th class="text-center" style="width: 80px;">
+                            <th class="text-center" style="width: 90px; min-width:90px;">
                                 % {{ division_names.user1_name if division_names and division_names.user1_name else 'Usuário 1' }}
                             </th>
-                            <th class="text-center" style="width: 80px;">
+                            <th class="text-center" style="width: 90px; min-width:90px;">
                                 % {{ division_names.user2_name if division_names and division_names.user2_name else 'Usuário 2' }}
                             </th>
                             <th class="modern-table-cell-actions">Ações</th>
@@ -551,25 +550,8 @@
                                     </select>
                                 {% endif %}
                             </td>
-                            <td class="modern-table-cell">
-                                {% if transaction.verified %}
-                                    {% if transaction.user_subcategory %}
-                                        <span class="modern-badge modern-badge-secondary">{{ transaction.user_subcategory }}</span>
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                {% else %}
-                                    <select class="modern-form-control modern-form-control-sm subcategory-dropdown" 
-                                            data-transaction-id="{{ transaction.id }}" 
-                                            data-field="user_subcategory"
-                                            data-current-value="{{ transaction.user_subcategory or '' }}"
-                                            data-verified="{{ transaction.verified or 0 }}"
-                                            {% if transaction.verified %}disabled{% endif %}>
-                                        <option value=""></option>
-                                    </select>
-                                {% endif %}
-                            </td>
-                            <td class="text-center modern-table-cell">
+                            <!-- Célula Subcategoria REMOVIDA -->
+                            <td class="text-center modern-table-cell modern-table-cell-amount" style="min-width:130px; width:130px;">
                                 <div class="modern-transaction-amount {% if transaction.type == 'CREDIT' %}modern-amount-positive{% else %}modern-amount-negative{% endif %}">
                                     {% if transaction.type == 'CREDIT' %}+{% else %}-{% endif %}{{ transaction.amount|currency_br }}
                                 </div>
@@ -616,7 +598,7 @@
                                     <label for="ignore_{{ transaction.id }}" class="modern-checkbox-label"></label>
                                 </div>
                             </td>
-                            <td class="text-center modern-table-cell" style="width: 80px;">
+                            <td class="text-center modern-table-cell" style="width: 90px; min-width:90px;">
                                 <div class="input-group input-group-sm">
                                     <input type="number" class="form-control form-control-sm tx-split-u1" min="0" max="100" step="10" style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;" 
                                            data-transaction-id="{{ transaction.id }}"
@@ -626,7 +608,7 @@
                                     </button>
                                 </div>
                             </td>
-                            <td class="text-center modern-table-cell" style="width: 80px;">
+                            <td class="text-center modern-table-cell" style="width: 90px; min-width:90px;">
                                 <div class="input-group input-group-sm">
                                     <input type="number" class="form-control form-control-sm tx-split-u2" min="0" max="100" step="10" readonly style="font-size:0.72rem !important; padding:0.25rem 0.4rem !important; text-align:center;"
                                            data-transaction-id="{{ transaction.id }}"
@@ -785,12 +767,7 @@
                             </select>
                         </div>
                         
-                        <div class="col-md-6">
-                            <label for="edit_user_subcategory" class="form-label">Subcategoria</label>
-                            <select class="form-select" id="edit_user_subcategory" name="user_subcategory">
-                                <option value="">Selecione uma subcategoria</option>
-                            </select>
-                        </div>
+                        <!-- Campo Subcategoria removido -->
                     </div>
                 </form>
             </div>
@@ -1668,17 +1645,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         function getColumnIndex(column) {
             // Índices atualizados após inserção da coluna 'Dia' logo após 'Origem'.
-            // Cabeçalhos atuais (0-based): 0 Origem, 1 Dia, 2 Data, 3 Descrição, 4 Conta, 5 Categoria, 6 Subcategoria, 7 Valor, 8 Modificação, 9 Verif., 10 Ignorar, 11 %U1, 12 %U2, 13 Ações
+            // Cabeçalhos atuais (0-based) sem Subcategoria: 0 Origem, 1 Dia, 2 Data, 3 Descrição, 4 Conta, 5 Categoria, 6 Valor, 7 Modificação, 8 Verif., 9 Ignorar, 10 %U1, 11 %U2, 12 Ações
             switch (column) {
                 case 'date': return 2;              // Data
                 case 'description': return 3;       // Descrição
                 case 'account': return 4;           // Conta
                 case 'user_category': return 5;     // Categoria (usuário)
-                case 'user_subcategory': return 6;  // Subcategoria (usuário)
-                case 'amount': return 7;            // Valor
-                case 'modification_date': return 8; // Modificação
-                case 'verified': return 9;          // Verif.
-                case 'ignored': return 10;          // Ignorar
+                case 'amount': return 6;            // Valor
+                case 'modification_date': return 7; // Modificação
+                case 'verified': return 8;          // Verif.
+                case 'ignored': return 9;           // Ignorar
                 default: return 2;
             }
         }
@@ -2022,11 +1998,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function populateCategorySelect(transactionType = null) {
         const categorySelect = document.getElementById('edit_user_category');
-        const subcategorySelect = document.getElementById('edit_user_subcategory');
+    // Subcategoria removida
         
         // Limpar opções existentes
         categorySelect.innerHTML = '<option value="">Selecione uma categoria</option>';
-        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
+    // Removida limpeza de subcategoria
         
         // Se não foi passado tipo, tentar detectar do campo tipo no modal
         if (!transactionType) {
@@ -2062,7 +2038,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener para mudança de categoria
     document.getElementById('edit_user_category').addEventListener('change', function() {
         const selectedCategory = this.value;
-        const subcategorySelect = document.getElementById('edit_user_subcategory');
+    // Subcategoria removida
         
         // Obter tipo de transação atual
         const typeSelect = document.getElementById('edit_type');
@@ -2083,8 +2059,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Limpar subcategorias
-        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
-        subcategorySelect.style.borderLeft = '';
+    // Subcategoria removida
         
         if (selectedCategory) {
             // Filtrar subcategorias para a categoria selecionada E o tipo de transação
@@ -2102,16 +2077,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Event listener para mudança de subcategoria
-    document.getElementById('edit_user_subcategory').addEventListener('change', function() {
-        const selectedSubcategory = this.value;
-        
-        if (selectedSubcategory) {
-            const subcategoryData = userCategories.find(cat => cat.subcategory === selectedSubcategory);
-            this.style.borderLeft = `4px solid ${subcategoryData?.color || '#6c757d'}`;
-        } else {
-            this.style.borderLeft = '';
-        }
-    });
+    // Listener de subcategoria removido
     
     // Event listener para mudança de tipo de transação no modal
     document.getElementById('edit_type').addEventListener('change', function() {
@@ -2122,12 +2088,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Limpar seleções atuais
         const categorySelect = document.getElementById('edit_user_category');
-        const subcategorySelect = document.getElementById('edit_user_subcategory');
+    // Subcategoria removida
         
         categorySelect.value = '';
         categorySelect.style.borderLeft = '';
-        subcategorySelect.innerHTML = '<option value="">Selecione uma subcategoria</option>';
-        subcategorySelect.style.borderLeft = '';
+    // Subcategoria removida
     });
     
     // Funções para edição inline de categorias na tabela
@@ -2423,66 +2388,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     catBadge.style.fontWeight = '600';
                 }
             }
-            // Subcategoria
-            const subBadge = row.querySelector('td:nth-child(6) .modern-badge');
-            const subText = subBadge ? subBadge.textContent.trim() : '';
-            if (subBadge && subText) {
-                const subData = userCategories.find(c => c.subcategory === subText);
-                if (subData?.color) {
-                    subBadge.style.borderLeft = `6px solid ${subData.color}`;
-                    subBadge.style.backgroundColor = `${subData.color}15`;
-                    subBadge.style.color = '#111827';
-                    subBadge.style.fontWeight = '600';
-                }
-            }
+            // Badge de subcategoria removida
         });
     }
     
-    // Gerenciamento dos filtros de categoria e subcategoria
-    function initializeFilterCategoryRelation() {
-        const categoryFilter = document.getElementById('user_category');
-        const subcategoryFilter = document.getElementById('user_subcategory');
-        
-        if (categoryFilter && subcategoryFilter) {
-            categoryFilter.addEventListener('change', function() {
-                const selectedCategory = this.value;
-                
-                // Buscar subcategorias para a categoria selecionada
-                fetch('/api/categories')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Limpar subcategorias
-                            subcategoryFilter.innerHTML = '<option value="">Todas</option>';
-                            
-                            if (selectedCategory) {
-                                // Filtrar subcategorias para a categoria selecionada
-                                const subcategories = data.categories.filter(cat => cat.name === selectedCategory);
-                                
-                                subcategories.forEach(subcategory => {
-                                    if (subcategory.subcategory) {
-                                        const option = document.createElement('option');
-                                        option.value = subcategory.subcategory;
-                                        option.textContent = subcategory.subcategory;
-                                        subcategoryFilter.appendChild(option);
-                                    }
-                                });
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Erro ao carregar subcategorias:', error);
-                    });
-            });
-        }
-    }
-    
-    // Inicializar relação entre filtros
-    initializeFilterCategoryRelation();
+    // Filtro de subcategoria removido
     
     function initializeDropdownStates() {
         // Verificar todos os dropdowns e aplicar estado baseado no verificado
-        document.querySelectorAll('.category-dropdown, .subcategory-dropdown').forEach(dropdown => {
+    document.querySelectorAll('.category-dropdown').forEach(dropdown => {
             const transactionId = dropdown.dataset.transactionId;
             const isVerified = dropdown.dataset.verified === '1';
             const currentValue = dropdown.dataset.currentValue || dropdown.value;
@@ -2534,6 +2448,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkboxes = container.querySelectorAll('input[type="checkbox"]:not([data-action])');
             const selectAllCheckbox = container.querySelector('input[type="checkbox"][id$="_select_all"]');
             const placeholder = display.getAttribute('data-placeholder');
+            const enableSearch = container.hasAttribute('data-search');
+            let searchInput = null;
+            if(enableSearch){
+                // Inserir campo de busca no topo das opções se não existir
+                const existing = options.querySelector('.multi-select-search-wrapper');
+                if(!existing){
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'multi-select-search-wrapper';
+                    wrapper.style.cssText = 'padding:4px 6px; border-bottom:1px solid #eee; position:sticky; top:0; background:#fff; z-index:5;';
+                    searchInput = document.createElement('input');
+                    searchInput.type = 'text';
+                    searchInput.className = 'form-control form-control-sm';
+                    searchInput.placeholder = 'Buscar...';
+                    searchInput.style.fontSize = '0.70rem';
+                    wrapper.appendChild(searchInput);
+                    options.prepend(wrapper);
+                } else {
+                    searchInput = existing.querySelector('input');
+                }
+            }
             
             // Função para atualizar o texto do display
             function updateDisplay() {
@@ -2586,6 +2520,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Toggle atual
                 options.classList.toggle('show');
                 display.classList.toggle('open');
+                if(enableSearch && options.classList.contains('show') && searchInput){
+                    setTimeout(()=> searchInput.focus(), 50);
+                }
             });
             
             // Gerenciar "Selecionar todas"
@@ -2629,6 +2566,26 @@ document.addEventListener('DOMContentLoaded', function() {
             // Inicializar display e estado do "Selecionar todas"
             updateDisplay();
             updateSelectAllState();
+
+            // Lógica de busca dinâmica
+            if(enableSearch && searchInput){
+                const optionDivs = Array.from(options.querySelectorAll('.multi-select-option')).filter(div=>!div.classList.contains('multi-select-select-all'));
+                searchInput.addEventListener('input', () => {
+                    const term = searchInput.value.trim().toLowerCase();
+                    let visibleCount = 0;
+                    optionDivs.forEach(div => {
+                        const label = div.querySelector('label');
+                        const text = (label ? label.textContent : div.textContent).toLowerCase();
+                        if(!term || text.includes(term)){
+                            div.style.display='flex';
+                            visibleCount++;
+                        } else {
+                            div.style.display='none';
+                        }
+                    });
+                    // Atualizar estado do select all para refletir apenas visíveis? Mantemos global.
+                });
+            }
         });
         
         // Fechar dropdowns ao clicar fora
@@ -2671,7 +2628,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if(!row) { continue; }
                         const verified = row.querySelector('.verification-checkbox');
                         if(verified && verified.checked) { continue; }
-                        const subSelect = row.querySelector('.subcategory-dropdown');
+                        // Subcategoria removida
 
                         if(sg.suggested_category){
                             if(![...catSelect.options].some(o=>o.value===sg.suggested_category)){
@@ -2687,18 +2644,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             updateSubcategoryOptions(sg.id, sg.suggested_category);
                         }
 
-                        if(subSelect && sg.suggested_subcategory){
-                            if(![...subSelect.options].some(o=>o.value===sg.suggested_subcategory)){
-                                const opt2 = document.createElement('option');
-                                opt2.value = sg.suggested_subcategory;
-                                opt2.textContent = sg.suggested_subcategory;
-                                subSelect.appendChild(opt2);
-                            }
-                            subSelect.value = sg.suggested_subcategory;
-                            subSelect.dataset.currentValue = sg.suggested_subcategory;
-                            subSelect.setAttribute('data-ephemeral','1');
-                            updateDropdownVisualStyle(subSelect, sg.suggested_subcategory);
-                        }
+                        // Sugestão de subcategoria removida
 
                         row.classList.add('suggested-temp');
                         applied++;
@@ -2812,5 +2758,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 }); // <-- fecha o document.addEventListener('DOMContentLoaded', ... )
 
-</script>
+// Script incremental de descrição removido (multi-select implementado)
+// Caso seja necessário autocomplete futuro, implementar aqui sem conflitar com multi-select.
+// Mantido bloco vazio para consistência de estrutura.
+ </script>
 {% endblock %}
