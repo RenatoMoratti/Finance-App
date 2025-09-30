@@ -298,6 +298,34 @@
                     </div>
                     
                     <!-- Subcategory Filter REMOVIDO -->
+                    <!-- Description Filter -->
+                    <div class="col-lg-2 col-md-3">
+                        <label class="form-label form-label-sm">Descrição</label>
+                        <div class="multi-select-container" data-name="description_filter" data-search="true" data-placeholder="Todas">
+                            <div class="multi-select-display" data-placeholder="Todas">
+                                <span class="multi-select-placeholder">Todas</span>
+                            </div>
+                            <div class="multi-select-options">
+                                <div class="multi-select-option multi-select-select-all" data-action="select-all">
+                                    <input type="checkbox" id="desc_select_all">
+                                    <label for="desc_select_all">✓ Selecionar todas</label>
+                                </div>
+                                {% set desc_values = [] %}
+                                {% for tx in (all_transactions or []) %}
+                                    {% if tx.description and tx.description not in desc_values %}
+                                        {% set _ = desc_values.append(tx.description) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% for d in desc_values|sort %}
+                                <div class="multi-select-option" data-value="{{ d }}">
+                                    <input type="checkbox" id="desc_{{ loop.index }}" value="{{ d }}" name="description_filter" 
+                                           {% if filters.description_filter and (d in (filters.description_filter if filters.description_filter is iterable and filters.description_filter is not string else [filters.description_filter])) %}checked{% endif %}>
+                                    <label for="desc_{{ loop.index }}">{{ d }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- Date Filters -->
                     <div class="col-lg-1 col-md-2">
@@ -2420,6 +2448,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkboxes = container.querySelectorAll('input[type="checkbox"]:not([data-action])');
             const selectAllCheckbox = container.querySelector('input[type="checkbox"][id$="_select_all"]');
             const placeholder = display.getAttribute('data-placeholder');
+            const enableSearch = container.hasAttribute('data-search');
+            let searchInput = null;
+            if(enableSearch){
+                // Inserir campo de busca no topo das opções se não existir
+                const existing = options.querySelector('.multi-select-search-wrapper');
+                if(!existing){
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'multi-select-search-wrapper';
+                    wrapper.style.cssText = 'padding:4px 6px; border-bottom:1px solid #eee; position:sticky; top:0; background:#fff; z-index:5;';
+                    searchInput = document.createElement('input');
+                    searchInput.type = 'text';
+                    searchInput.className = 'form-control form-control-sm';
+                    searchInput.placeholder = 'Buscar...';
+                    searchInput.style.fontSize = '0.70rem';
+                    wrapper.appendChild(searchInput);
+                    options.prepend(wrapper);
+                } else {
+                    searchInput = existing.querySelector('input');
+                }
+            }
             
             // Função para atualizar o texto do display
             function updateDisplay() {
@@ -2472,6 +2520,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Toggle atual
                 options.classList.toggle('show');
                 display.classList.toggle('open');
+                if(enableSearch && options.classList.contains('show') && searchInput){
+                    setTimeout(()=> searchInput.focus(), 50);
+                }
             });
             
             // Gerenciar "Selecionar todas"
@@ -2515,6 +2566,26 @@ document.addEventListener('DOMContentLoaded', function() {
             // Inicializar display e estado do "Selecionar todas"
             updateDisplay();
             updateSelectAllState();
+
+            // Lógica de busca dinâmica
+            if(enableSearch && searchInput){
+                const optionDivs = Array.from(options.querySelectorAll('.multi-select-option')).filter(div=>!div.classList.contains('multi-select-select-all'));
+                searchInput.addEventListener('input', () => {
+                    const term = searchInput.value.trim().toLowerCase();
+                    let visibleCount = 0;
+                    optionDivs.forEach(div => {
+                        const label = div.querySelector('label');
+                        const text = (label ? label.textContent : div.textContent).toLowerCase();
+                        if(!term || text.includes(term)){
+                            div.style.display='flex';
+                            visibleCount++;
+                        } else {
+                            div.style.display='none';
+                        }
+                    });
+                    // Atualizar estado do select all para refletir apenas visíveis? Mantemos global.
+                });
+            }
         });
         
         // Fechar dropdowns ao clicar fora
@@ -2687,5 +2758,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 }); // <-- fecha o document.addEventListener('DOMContentLoaded', ... )
 
-</script>
+// Script incremental de descrição removido (multi-select implementado)
+// Caso seja necessário autocomplete futuro, implementar aqui sem conflitar com multi-select.
+// Mantido bloco vazio para consistência de estrutura.
+ </script>
 {% endblock %}

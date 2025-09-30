@@ -287,6 +287,17 @@ def transactions():
         verification_filter = request.args.getlist('verification_filter')  # Lista de status
         type_filter = request.args.getlist('type_filter')  # Lista de tipos de transação
         limit = int(request.args.get('limit', 100))
+        # Suporte a múltiplas descrições: pode vir como parâmetro repetido description_filter=desc1&description_filter=desc2
+        description_filter_raw = request.args.getlist('description_filter')
+        if len(description_filter_raw) <= 1:
+            # Também suportar caso venha como string única separada por ; ou ,
+            single_val = description_filter_raw[0] if description_filter_raw else request.args.get('description_filter', '')
+            if single_val and (',' in single_val or ';' in single_val):
+                description_filter = [v.strip() for v in single_val.replace(';', ',').split(',') if v.strip()]
+            else:
+                description_filter = single_val.strip() or None
+        else:
+            description_filter = [v.strip() for v in description_filter_raw if v and v.strip()]
 
         # Busca transações com informações de conexão
         transactions_list = db.get_transactions_with_connection_info(
@@ -301,7 +312,8 @@ def transactions():
             modification_start_date=modification_start_date,
             modification_end_date=modification_end_date,
             verification_filter=verification_filter if verification_filter else None,
-            type_filter=type_filter if type_filter else None
+            type_filter=type_filter if type_filter else None,
+            description_filter=description_filter
         )
 
         # Dados auxiliares para filtros e exibição
@@ -341,6 +353,7 @@ def transactions():
                 'verification_filter': verification_filter,
                 'type_filter': type_filter,
                 'limit': limit,
+                'description_filter': description_filter,
             },
         )
     except Exception as e:

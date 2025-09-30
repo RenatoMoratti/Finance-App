@@ -684,7 +684,8 @@ class Database:
                                              user_category: List[str] = None, user_subcategory: List[str] = None,
                                              modification_start_date: str = None, 
                                              modification_end_date: str = None,
-                                             verification_filter: List[str] = None, type_filter: List[str] = None) -> List[Dict]:
+                                             verification_filter: List[str] = None, type_filter: List[str] = None,
+                                             description_filter: List[str] | str | None = None) -> List[Dict]:
         """Obt├⌐m transa├º├╡es com informa├º├╡es da conex├úo e conta, incluindo filtro por data de modifica├º├úo"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -751,6 +752,22 @@ class Database:
             if category:
                 query += ' AND t.category = ?'
                 params.append(category)
+
+            if description_filter:
+                # Permite lista de descrições (OR) ou string única
+                if isinstance(description_filter, list):
+                    cleaned = [d.strip() for d in description_filter if d and d.strip()]
+                    if cleaned:
+                        # Limita quantidade para evitar query excessivamente longa
+                        cleaned = cleaned[:25]
+                        conds = []
+                        for d in cleaned:
+                            conds.append('LOWER(t.description) LIKE LOWER(?)')
+                            params.append(f'%{d}%')
+                        query += ' AND (' + ' OR '.join(conds) + ')'
+                elif isinstance(description_filter, str) and description_filter.strip():
+                    query += ' AND LOWER(t.description) LIKE LOWER(?)'
+                    params.append(f'%{description_filter.strip()}%')
             
             if user_category and len(user_category) > 0:
                 # Filtro múltiplo para categorias de usuário
